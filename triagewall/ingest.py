@@ -28,6 +28,7 @@ from pathlib import Path
 from asset_inventory import configured_inventory_path
 from config_bootstrap import packaged_prefilter_path
 from database import connect_database
+from email_alert import NOTIFY_VERDICTS, send_alert_email
 from environment import parse_boolean
 from migrations import verify_db_initialized
 from operator_config import (
@@ -761,6 +762,17 @@ def process_line(conn, line):
         log.info(
             f"[{verdict['verdict']:>15}] {verdict['confidence']:.2f}  {sig[:80]}"
         )
+        if verdict["verdict"] in NOTIFY_VERDICTS:
+            send_alert_email(
+                f"TriageWall [{verdict['verdict']}] {sig[:80]}",
+                f"Veredicto: {verdict['verdict']}\n"
+                f"Confianza: {verdict['confidence']:.2f}\n"
+                f"Firma: {sig}\n"
+                f"Origen: {normalized_event.src_ip}:{normalized_event.src_port}\n"
+                f"Destino: {normalized_event.dest_ip}:{normalized_event.dest_port}\n"
+                f"Fecha: {normalized_event.timestamp}\n\n"
+                f"{verdict.get('reasoning', '')}\n",
+            )
         return PROCESSED_LINE
     except sqlite3.IntegrityError as e:
         conn.rollback()

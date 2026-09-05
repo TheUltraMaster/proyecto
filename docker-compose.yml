@@ -74,6 +74,10 @@ services:
       DEMO_MODE: ${DEMO_MODE:-false}
       INTERNAL_SUBNETS: ${INTERNAL_SUBNETS:-10.0.0.0/24 and 192.168.1.0/24}
       ASSET_INVENTORY_PATH: /app/triagewall/config/assets.json
+
+      ALERT_EMAIL_FROM: ${ALERT_EMAIL_FROM:-}
+      ALERT_EMAIL_PASSWORD: ${ALERT_EMAIL_PASSWORD:-}
+      ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:-}
     volumes:
       - ${HOST_DATA_DIR:-./data}:/var/lib/triagewall
       - ${HOST_EVE_DIR:-./data}:/var/log/suricata:ro
