@@ -93,10 +93,10 @@ function formatTimestamp(value) {
 
 function formatRelativeAge(seconds) {
   const value = Number(seconds);
-  if (!Number.isFinite(value) || value < 0) return "Unknown";
-  if (value < 60) return `${Math.round(value)}s ago`;
-  if (value < 3600) return `${Math.round(value / 60)}m ago`;
-  return `${(value / 3600).toFixed(1)}h ago`;
+  if (!Number.isFinite(value) || value < 0) return "Desconocido";
+  if (value < 60) return `hace ${Math.round(value)} s`;
+  if (value < 3600) return `hace ${Math.round(value / 60)} min`;
+  return `hace ${(value / 3600).toFixed(1)} h`;
 }
 
 function formatCompact(value) {
@@ -133,12 +133,12 @@ function initializeView() {
     ? window.history.state.searchWindow
     : null;
   const titles = {
-    triage: "Triage queue",
-    overview: "Overview",
-    behavioral: "Behavioral signals",
-    integrity: "Integrity",
-    configuration: "Configuration",
-    detail: "Alert detail",
+    triage: "Cola",
+    overview: "Resumen",
+    behavioral: "Señales de comportamiento",
+    integrity: "Integridad",
+    configuration: "Configuración",
+    detail: "Detalle de alerta",
   };
 
   document.querySelectorAll("[data-view]").forEach((panel) => {
@@ -255,7 +255,7 @@ function retireActiveDetail() {
   activeInvestigation = null;
   const content = document.getElementById("detailPageContent");
   if (content) {
-    content.innerHTML = '<div class="loading-state">Loading alert detail…</div>';
+    content.innerHTML = '<div class="loading-state">Cargando detalle de la alerta…</div>';
   }
   renderDetailNavigation(null);
 }
@@ -404,7 +404,7 @@ async function loadTimeline() {
     return timelineCache.data;
   }
   const response = await fetch(`${API}/api/v1/timeline`);
-  if (!response.ok) throw new Error(`Timeline request failed (${response.status})`);
+  if (!response.ok) throw new Error(`La solicitud de la línea de tiempo falló (${response.status})`);
   const data = await response.json();
   const points = data.buckets ?? [];
   timelineCache = { at: now, data: points };
@@ -415,7 +415,7 @@ function renderTimeline(points) {
   const host = document.getElementById("timelineChart");
   if (!host) return;
   if (!Array.isArray(points) || !points.length) {
-    host.innerHTML = '<div class="empty-state">No activity recorded in this window.</div>';
+    host.innerHTML = '<div class="empty-state">No se registró actividad en esta ventana.</div>';
     return;
   }
 
@@ -482,17 +482,17 @@ async function loadVerdictPage(cursor = null, append = false, request = beginQue
     signal: request.signal,
   });
   if (!queueRequestIsCurrent(request)) return false;
-  if (!response.ok) throw new Error(`Decision request failed (${response.status})`);
+  if (!response.ok) throw new Error(`La solicitud de decisiones falló (${response.status})`);
   const data = await response.json();
   if (!queueRequestIsCurrent(request)) return false;
   const responseSearchWindow = typeof data.search_window === "string"
     ? data.search_window
     : null;
   if (Boolean(normalizedSignature(request.filter.signature)) !== Boolean(responseSearchWindow)) {
-    throw new Error("Decision search returned invalid window state");
+    throw new Error("La búsqueda de decisiones devolvió un estado de ventana inválido");
   }
   if (append && responseSearchWindow !== queueSearchWindow) {
-    throw new Error("Decision search window changed while loading older alerts");
+    throw new Error("La ventana de búsqueda de decisiones cambió mientras se cargaban alertas anteriores");
   }
   mode = data.mode;
   nextCursor = data.next_cursor;
@@ -526,7 +526,7 @@ async function load({ refreshDetail = true } = {}) {
 
   try {
     const statsResponse = await fetch(`${API}/api/v1/stats`);
-    if (!statsResponse.ok) throw new Error(`Stats request failed (${statsResponse.status})`);
+    if (!statsResponse.ok) throw new Error(`La solicitud de estadísticas falló (${statsResponse.status})`);
     const statsData = await statsResponse.json();
     mode = statsData.mode;
     renderStats(statsData.stats);
@@ -545,11 +545,11 @@ async function load({ refreshDetail = true } = {}) {
       const points = await loadTimeline();
       if (!loadOriginIsCurrent(origin)) return;
       renderTimeline(points);
-      document.getElementById("timelineMeta").textContent = points.length ? `${points.length} hourly buckets` : "No activity";
+      document.getElementById("timelineMeta").textContent = points.length ? `${points.length} bloques por hora` : "Sin actividad";
     } catch (_error) {
       if (!loadOriginIsCurrent(origin)) return;
-      document.getElementById("timelineChart").innerHTML = '<div class="empty-state">Decision volume is temporarily unavailable.</div>';
-      document.getElementById("timelineMeta").textContent = "Activity unavailable";
+      document.getElementById("timelineChart").innerHTML = '<div class="empty-state">El volumen de decisiones no está disponible temporalmente.</div>';
+      document.getElementById("timelineMeta").textContent = "Actividad no disponible";
     }
 
   }
@@ -566,11 +566,11 @@ async function load({ refreshDetail = true } = {}) {
     try {
       const applied = await loadVerdictPage(null, false, request);
       if (!applied) return;
-      document.getElementById("freshness").textContent = `Live · ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+      document.getElementById("freshness").textContent = `En vivo · ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
     } catch (error) {
       // A superseded or aborted queue read is not a failure to report.
       if (!queueRequestIsCurrent(request)) return;
-      document.getElementById("freshness").textContent = "Decision feed unavailable";
+      document.getElementById("freshness").textContent = "Feed de decisiones no disponible";
       showToast(error.message, true);
     }
   } else if (origin.view === "triage") {
@@ -586,7 +586,7 @@ function renderHealth(responseOk, health) {
   const age = Number(health.last_alert_age_seconds ?? Number.NaN);
   const isHealthy = responseOk && health.status === "ok";
   const isStale = !isHealthy;
-  const label = isHealthy ? "Operational" : health.status === "stale" ? "Ingest stale" : "Unavailable";
+  const label = isHealthy ? "Operativo" : health.status === "stale" ? "Ingesta desactualizada" : "No disponible";
   const ageLabel = formatRelativeAge(age);
   const storage = health.storage;
 
@@ -606,7 +606,7 @@ function renderHealth(responseOk, health) {
   const banner = document.getElementById("staleBanner");
   const bannerText = document.getElementById("staleBannerText");
   banner.classList.toggle("hidden", isHealthy);
-  if (!isHealthy) bannerText.textContent = Number.isFinite(age) ? `The latest event was processed ${ageLabel}.` : "The health endpoint could not confirm recent ingest.";
+  if (!isHealthy) bannerText.textContent = Number.isFinite(age) ? `El último evento se procesó ${ageLabel}.` : "El endpoint de salud no pudo confirmar ingesta reciente.";
 }
 
 function renderStats(stats) {
@@ -627,7 +627,7 @@ function renderStats(stats) {
   document.getElementById("falsePositiveCount").textContent = formatCompact(falsePositive);
   document.getElementById("uncertainCount").textContent = formatCompact(uncertain);
   document.getElementById("agreementRate").textContent = agreement === null ? "—" : `${agreement}%`;
-  document.getElementById("agreementDetail").textContent = stats.reviewed ? `${formatCompact(stats.reviewed)} reviewed` : "No reviews in this window";
+  document.getElementById("agreementDetail").textContent = stats.reviewed ? `${formatCompact(stats.reviewed)} revisadas` : "Sin revisiones en esta ventana";
   document.getElementById("lifetimeTotal").textContent = formatCompact(stats.total ?? 0);
   document.getElementById("overviewLifetime").textContent = formatCompact(stats.total ?? 0);
   document.getElementById("policyBand").style.width = `${policyRate}%`;
@@ -660,19 +660,19 @@ function renderSpc(data) {
   }
 
   panel.classList.remove("hidden");
-  document.getElementById("spcMeta").textContent = data.count_24h ? `${data.count_24h} in 24h` : `${anomalies.length} recorded`;
+  document.getElementById("spcMeta").textContent = data.count_24h ? `${data.count_24h} en 24 h` : `${anomalies.length} registradas`;
   document.getElementById("spcList").innerHTML = anomalies.map((anomaly) => {
     const timestamp = anomaly.detected_at
       ? new Date(anomaly.detected_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
       : "";
-    const feature = anomaly.feature === "alert_rate" ? "Rate deviation" : "Novel signature";
-    const identity = anomaly.signature_id == null ? escapeHtml(anomaly.ip ?? "Unknown source") : `${escapeHtml(anomaly.ip ?? "Unknown source")} · SID ${escapeHtml(anomaly.signature_id)}`;
+    const feature = anomaly.feature === "alert_rate" ? "Desviación de tasa" : "Firma nueva";
+    const identity = anomaly.signature_id == null ? escapeHtml(anomaly.ip ?? "Origen desconocido") : `${escapeHtml(anomaly.ip ?? "Origen desconocido")} · SID ${escapeHtml(anomaly.signature_id)}`;
     return `
       <div class="signal-row">
         <span class="badge badge-signal">SPC</span>
         <div class="signal-copy">
           <strong>${feature} · ${identity}</strong>
-          <small>${escapeHtml(anomaly.note ?? "Independent behavioral deviation detected")}</small>
+          <small>${escapeHtml(anomaly.note ?? "Desviación de comportamiento independiente detectada")}</small>
         </div>
         <span class="signal-time">${escapeHtml(timestamp)}</span>
       </div>`;
@@ -680,27 +680,27 @@ function renderSpc(data) {
 }
 
 function renderPagination() {
-  const pathLabel = currentFilter.model === "llm" ? "model-reviewed" : currentFilter.model === "prefilter" ? "policy-resolved" : "matching";
+  const pathLabel = currentFilter.model === "llm" ? "revisadas por el modelo" : currentFilter.model === "prefilter" ? "resueltas por política" : "coincidentes";
   // The loaded count describes this page; the unreviewed count is a global 24h
   // total from /stats, so it is labelled as such and never reads as a count of
   // what is currently filtered or paged in.
-  const reviewLabel = `${formatCompact(unreviewedModelCount)} unreviewed in the last 24h, all filters`;
+  const reviewLabel = `${formatCompact(unreviewedModelCount)} sin revisar en las últimas 24 h, todos los filtros`;
   let searchScopeLabel = "";
   if (queueSearchScope) {
     const candidateLimit = Number(queueSearchScope.candidate_limit ?? 0).toLocaleString();
     const candidatesInScope = Number(queueSearchScope.candidates_in_scope ?? 0).toLocaleString();
     searchScopeLabel = queueSearchScope.truncated
-      ? ` · search covers newest ${candidateLimit} retained alerts; older alerts not examined`
-      : ` · search covers all ${candidatesInScope} retained alerts`;
+      ? ` · la búsqueda cubre las ${candidateLimit} alertas retenidas más recientes; las alertas más antiguas no se examinaron`
+      : ` · la búsqueda cubre las ${candidatesInScope} alertas retenidas en total`;
   }
-  document.getElementById("queueMeta").textContent = `${currentVerdicts.length} ${pathLabel} decisions loaded on this page · ${reviewLabel}${searchScopeLabel}`;
+  document.getElementById("queueMeta").textContent = `${currentVerdicts.length} decisiones ${pathLabel} cargadas en esta página · ${reviewLabel}${searchScopeLabel}`;
   document.getElementById("paginationMeta").textContent = browsingHistory
-    ? `${currentVerdicts.length} loaded · live queue refresh paused while browsing history`
-    : `${currentVerdicts.length} loaded · newest first`;
+    ? `${currentVerdicts.length} cargadas · actualización en vivo pausada mientras se navega el historial`
+    : `${currentVerdicts.length} cargadas · más recientes primero`;
   const loadOlderButton = document.getElementById("loadOlderButton");
   loadOlderButton.classList.toggle("hidden", !nextCursor);
   loadOlderButton.disabled = pageLoading;
-  loadOlderButton.textContent = pageLoading ? "Loading…" : `Load ${PAGE_SIZE} older`;
+  loadOlderButton.textContent = pageLoading ? "Cargando…" : `Cargar ${PAGE_SIZE} anteriores`;
   document.getElementById("returnLiveButton").classList.toggle("hidden", !browsingHistory);
 }
 
@@ -749,36 +749,36 @@ function renderVerdicts(list) {
   if (!currentVerdicts.length) {
     document.getElementById("verdicts").innerHTML = `
       <div class="empty-card">
-        <div><strong>No decisions match this view.</strong><span>Adjust the filters or wait for the next event. An empty model queue often means deterministic policy is resolving routine traffic.</span></div>
+        <div><strong>Ninguna decisión coincide con esta vista.</strong><span>Ajusta los filtros o espera el próximo evento. Una cola de modelo vacía suele significar que la política determinista está resolviendo tráfico rutinario.</span></div>
       </div>`;
     return;
   }
 
   document.getElementById("verdicts").innerHTML = currentVerdicts.map((verdict, index) => {
     const sensor = verdict.sensor_context?.source ?? "suricata";
-    const ruleLabel = sensor === "wazuh" ? "Rule" : "SID";
+    const ruleLabel = sensor === "wazuh" ? "Regla" : "SID";
     const agent = verdict.sensor_context?.agent;
     const timestampValue = verdict.timestamp ?? verdict.processed_at;
     const timestamp = timestampValue
       ? new Date(timestampValue).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })
       : "—";
-    const source = verdict.src_ip ?? (agent?.name ? `Agent ${agent.name}` : "—");
+    const source = verdict.src_ip ?? (agent?.name ? `Agente ${agent.name}` : "—");
     const destination = verdict.dest_ip ?? "—";
     const confidence = Number(verdict.confidence ?? 0);
     const reviewedLabel = verdict.human_verdict
-      ? ` · ${verdict.agreed ? "agreed" : "corrected"}`
+      ? ` · ${verdict.agreed ? "de acuerdo" : "corregido"}`
       : "";
 
     return `
-      <article class="decision-card verdict-${escapeHtml(verdict.verdict)} ${index === focusedIndex ? "focused" : ""}" data-idx="${index}" data-event-id="${Number(verdict.id)}" tabindex="0" aria-label="Open alert details for ${escapeHtml(verdict.signature ?? "unnamed alert")}">
+      <article class="decision-card verdict-${escapeHtml(verdict.verdict)} ${index === focusedIndex ? "focused" : ""}" data-idx="${index}" data-event-id="${Number(verdict.id)}" tabindex="0" aria-label="Abrir detalles de la alerta para ${escapeHtml(verdict.signature ?? "alerta sin nombre")}">
         <time class="queue-time">${escapeHtml(timestamp)}</time>
         <div class="queue-signature">
-          <strong>${escapeHtml(verdict.signature ?? "Unnamed alert")}</strong>
+          <strong>${escapeHtml(verdict.signature ?? "Alerta sin nombre")}</strong>
           <span class="queue-rule"><span class="badge badge-sensor">${escapeHtml(sensor)}</span> ${ruleLabel} ${escapeHtml(verdict.signature_id ?? "?")}</span>
         </div>
         <span class="queue-endpoint queue-source">${escapeHtml(source)}</span>
         <span class="queue-endpoint queue-destination">${escapeHtml(destination)}</span>
-        <span class="badge badge-${escapeHtml(verdict.verdict)} queue-verdict" title="${escapeHtml(reviewedLabel.trim())}">${escapeHtml(String(verdict.verdict ?? "unknown").replace("_", " "))}</span>
+        <span class="badge badge-${escapeHtml(verdict.verdict)} queue-verdict" title="${escapeHtml(reviewedLabel.trim())}">${escapeHtml(verdictDisplay(verdict.verdict))}</span>
         <span class="queue-confidence">${Number.isFinite(confidence) ? confidence.toFixed(2) : "—"}</span>
       </article>`;
   }).join("");
@@ -793,20 +793,20 @@ function renderVerdicts(list) {
 
 function renderAssets(assetContext) {
   const entries = [
-    ["Source", assetContext?.source],
-    ["Destination", assetContext?.destination],
+    ["Origen", assetContext?.source],
+    ["Destino", assetContext?.destination],
   ].filter(([, asset]) => asset?.hostname);
   if (!entries.length) return "";
   return `<div class="asset-row">${entries.map(([side, asset]) => `
-    <span class="asset-chip"><strong>${side}</strong> ${escapeHtml(asset.hostname)} · ${escapeHtml(asset.role ?? "asset")} · ${escapeHtml(asset.criticality ?? "unknown")}</span>`).join("")}</div>`;
+    <span class="asset-chip"><strong>${side}</strong> ${escapeHtml(asset.hostname)} · ${escapeHtml(asset.role ?? "activo")} · ${escapeHtml(asset.criticality ?? "desconocido")}</span>`).join("")}</div>`;
 }
 
 function shortModelName(value) {
-  if (!value) return "Local model";
+  if (!value) return "Modelo local";
   const text = String(value);
   if (text.length <= 24) return text;
   const tail = text.split("/").at(-1) ?? text;
-  return tail.length <= 24 ? tail : "Local model";
+  return tail.length <= 24 ? tail : "Modelo local";
 }
 
 function detailField(label, value) {
@@ -855,7 +855,7 @@ function readRawList(source, path, maximum = 8) {
   const items = value.filter((item) => item !== null && typeof item !== "object");
   if (!items.length) return null;
   const shown = items.slice(0, maximum).join(", ");
-  return items.length > maximum ? `${shown} (+${items.length - maximum} more)` : shown;
+  return items.length > maximum ? `${shown} (+${items.length - maximum} más)` : shown;
 }
 
 // Distinct from detailField: an absent derived value is stated as unrecorded
@@ -863,7 +863,7 @@ function readRawList(source, path, maximum = 8) {
 // sensor reported nothing.
 function derivedField(label, value) {
   const missing = value === null || value === undefined || value === "";
-  return `<div><dt>${escapeHtml(label)}</dt><dd${missing ? ' class="derived-missing"' : ""}>${escapeHtml(missing ? "Not recorded" : value)}</dd></div>`;
+  return `<div><dt>${escapeHtml(label)}</dt><dd${missing ? ' class="derived-missing"' : ""}>${escapeHtml(missing ? "No registrado" : value)}</dd></div>`;
 }
 
 // Wazuh manager/location/decoder/groups and the Suricata flow envelope are not
@@ -872,35 +872,35 @@ function derivedField(label, value) {
 // redaction — which withhold raw_alert — degrade to "not available" instead of
 // disclosing anything the verdict row would not.
 function renderSourceContext(verdict, sensor) {
-  const title = sensor === "wazuh" ? "Wazuh rule context" : "Suricata flow context";
+  const title = sensor === "wazuh" ? "Contexto de la regla de Wazuh" : "Contexto de flujo de Suricata";
   const raw = parseRawAlert(verdict.raw_alert);
   if (!raw) {
     return `
       <section class="detail-section">
         <h3>${escapeHtml(title)}</h3>
-        <p class="detail-empty">Not available. This response does not include the original sensor record, so these fields cannot be derived.</p>
+        <p class="detail-empty">No disponible. Esta respuesta no incluye el registro original del sensor, por lo que estos campos no se pueden derivar.</p>
       </section>`;
   }
   const fields = sensor === "wazuh"
     ? [
-      ["Rule ID", readRawScalar(raw, ["rule", "id"])],
-      ["Rule level", readRawScalar(raw, ["rule", "level"])],
-      ["Rule groups", readRawList(raw, ["rule", "groups"])],
-      ["Agent ID", verdict.sensor_context?.agent?.id ?? readRawScalar(raw, ["agent", "id"])],
-      ["Agent name", verdict.sensor_context?.agent?.name ?? readRawScalar(raw, ["agent", "name"])],
-      ["Manager", readRawScalar(raw, ["manager", "name"])],
-      ["Location", readRawScalar(raw, ["location"])],
-      ["Decoder", readRawScalar(raw, ["decoder", "name"])],
-      ["Parent decoder", readRawScalar(raw, ["decoder", "parent"])],
+      ["ID de regla", readRawScalar(raw, ["rule", "id"])],
+      ["Nivel de regla", readRawScalar(raw, ["rule", "level"])],
+      ["Grupos de la regla", readRawList(raw, ["rule", "groups"])],
+      ["ID de agente", verdict.sensor_context?.agent?.id ?? readRawScalar(raw, ["agent", "id"])],
+      ["Nombre del agente", verdict.sensor_context?.agent?.name ?? readRawScalar(raw, ["agent", "name"])],
+      ["Gestor", readRawScalar(raw, ["manager", "name"])],
+      ["Ubicación", readRawScalar(raw, ["location"])],
+      ["Decodificador", readRawScalar(raw, ["decoder", "name"])],
+      ["Decodificador padre", readRawScalar(raw, ["decoder", "parent"])],
     ]
     : [
-      ["Flow ID", readRawScalar(raw, ["flow_id"])],
-      ["Interface", readRawScalar(raw, ["in_iface"])],
-      ["Packet source", readRawScalar(raw, ["pkt_src"])],
-      ["Application protocol", readRawScalar(raw, ["app_proto"])],
-      ["Rule action", readRawScalar(raw, ["alert", "action"])],
-      ["Rule revision", readRawScalar(raw, ["alert", "rev"])],
-      ["Rule GID", readRawScalar(raw, ["alert", "gid"])],
+      ["ID de flujo", readRawScalar(raw, ["flow_id"])],
+      ["Interfaz", readRawScalar(raw, ["in_iface"])],
+      ["Origen del paquete", readRawScalar(raw, ["pkt_src"])],
+      ["Protocolo de aplicación", readRawScalar(raw, ["app_proto"])],
+      ["Acción de la regla", readRawScalar(raw, ["alert", "action"])],
+      ["Revisión de la regla", readRawScalar(raw, ["alert", "rev"])],
+      ["GID de la regla", readRawScalar(raw, ["alert", "gid"])],
     ];
   return `
     <section class="detail-section">
@@ -911,22 +911,22 @@ function renderSourceContext(verdict, sensor) {
 
 function relatedScopeNote(group, windowHours) {
   if (group.exact) {
-    return `Exact match across the last ${windowHours}h.`;
+    return `Coincidencia exacta en las últimas ${windowHours} h.`;
   }
   const examined = formatCompact(group.candidates_examined ?? 0);
   if (group.truncated) {
-    return `Partial: only the ${examined} newest events in the last ${windowHours}h were examined, so older matches in this window are not shown.`;
+    return `Parcial: solo se examinaron los ${examined} eventos más recientes de las últimas ${windowHours} h, por lo que no se muestran coincidencias más antiguas en esta ventana.`;
   }
-  return `Matched across ${examined} events in the last ${windowHours}h.`;
+  return `Coincidencias encontradas en ${examined} eventos de las últimas ${windowHours} h.`;
 }
 
 function renderRelatedAlert(alert) {
-  const verdictLabel = String(alert.verdict ?? "unknown").replace("_", " ");
+  const verdictText = verdictDisplay(alert.verdict);
   const endpoints = `${alert.src_ip ?? "—"} → ${alert.dest_ip ?? "—"}`;
   return `
     <a class="related-row" href="/triage/${Number(alert.id)}${queueQueryString()}" data-related-id="${Number(alert.id)}">
-      <span class="badge badge-${escapeHtml(alert.verdict)}">${escapeHtml(verdictLabel)}</span>
-      <span class="related-signature">${escapeHtml(alert.signature ?? "Unnamed alert")}</span>
+      <span class="badge badge-${escapeHtml(alert.verdict)}">${escapeHtml(verdictText)}</span>
+      <span class="related-signature">${escapeHtml(alert.signature ?? "Alerta sin nombre")}</span>
       <span class="related-endpoint">${escapeHtml(endpoints)}</span>
       <time class="related-time">${escapeHtml(formatTimestamp(alert.processed_at))}</time>
     </a>`;
@@ -938,27 +938,27 @@ function renderRecurrence(data) {
   const recurrence = data?.recurrence;
   if (!recurrence?.available) {
     host.innerHTML = `
-      <h3>Recurrence</h3>
-      <p class="detail-empty">Not recorded. This event carries no signature identifier, so it has no recurrence group.</p>`;
+      <h3>Recurrencia</h3>
+      <p class="detail-empty">No registrado. Este evento no tiene un identificador de firma, por lo que no tiene grupo de recurrencia.</p>`;
     return;
   }
-  const ruleLabel = recurrence.source_type === "wazuh" ? "rule" : "signature";
+  const ruleLabel = recurrence.source_type === "wazuh" ? "regla" : "firma";
   const scope = recurrence.truncated
-    ? `Partial: counted matches among the ${formatCompact(recurrence.candidates_examined)} newest events in this ${data.window_hours}h window.`
-    : `Exact across all ${formatCompact(recurrence.candidates_examined)} events in this ${data.window_hours}h window.`;
-  const firstLabel = recurrence.truncated ? "First examined" : "First in window";
+    ? `Parcial: se contaron coincidencias entre los ${formatCompact(recurrence.candidates_examined)} eventos más recientes de esta ventana de ${data.window_hours} h.`
+    : `Exacto en los ${formatCompact(recurrence.candidates_examined)} eventos de esta ventana de ${data.window_hours} h.`;
+  const firstLabel = recurrence.truncated ? "Primera aparición examinada" : "Primera aparición en la ventana";
   host.innerHTML = `
-    <h3>Recurrence</h3>
-    <p class="recurrence-headline"><strong>${escapeHtml(formatCompact(recurrence.occurrences))}</strong> ${recurrence.truncated ? "matches found in the sampled" : "in the last"} ${escapeHtml(data.window_hours)}h</p>
-    <p class="recurrence-basis">Grouped by source type and ${escapeHtml(ruleLabel)} ID (${escapeHtml(recurrence.source_type ?? "unknown")} · ${escapeHtml(recurrence.signature_id)}). Suricata and Wazuh identifiers are counted separately.</p>
+    <h3>Recurrencia</h3>
+    <p class="recurrence-headline"><strong>${escapeHtml(formatCompact(recurrence.occurrences))}</strong> ${recurrence.truncated ? "coincidencias encontradas en la muestra de las" : "en las últimas"} ${escapeHtml(data.window_hours)} h</p>
+    <p class="recurrence-basis">Agrupado por tipo de origen e ID de ${escapeHtml(ruleLabel)} (${escapeHtml(recurrence.source_type ?? "desconocido")} · ${escapeHtml(recurrence.signature_id)}). Los identificadores de Suricata y Wazuh se cuentan por separado.</p>
     <p class="related-scope${recurrence.truncated ? " related-scope-partial" : ""}">${escapeHtml(scope)}</p>
     <dl class="detail-grid recurrence-stats">
       ${detailField(firstLabel, formatTimestamp(recurrence.first_seen))}
-      ${detailField(recurrence.truncated ? "Latest examined" : "Latest in window", formatTimestamp(recurrence.last_seen))}
+      ${detailField(recurrence.truncated ? "Última aparición examinada" : "Última aparición en la ventana", formatTimestamp(recurrence.last_seen))}
       ${detailField("Real", formatCompact(recurrence.real_count))}
-      ${detailField("False positive", formatCompact(recurrence.false_positive_count))}
-      ${detailField("Uncertain", formatCompact(recurrence.uncertain_count))}
-      ${detailField("Unclassified", formatCompact(recurrence.unclassified_count))}
+      ${detailField("Falso positivo", formatCompact(recurrence.false_positive_count))}
+      ${detailField("Incierto", formatCompact(recurrence.uncertain_count))}
+      ${detailField("Sin clasificar", formatCompact(recurrence.unclassified_count))}
     </dl>`;
 }
 
@@ -967,18 +967,18 @@ function renderRelated(data) {
   if (!host) return;
   const groups = Array.isArray(data?.related) ? data.related : [];
   host.innerHTML = `
-    <h3>Related activity</h3>
+    <h3>Actividad relacionada</h3>
     ${groups.map((group) => `
       <div class="related-group">
         <div class="related-group-head">
           <strong>${escapeHtml(group.label)}</strong>
-          <span class="related-count">${escapeHtml(formatCompact(group.alerts?.length ?? 0))} shown</span>
+          <span class="related-count">${escapeHtml(formatCompact(group.alerts?.length ?? 0))} mostradas</span>
         </div>
         <p class="related-reason">${escapeHtml(group.reason)}</p>
         <p class="related-scope${group.truncated ? " related-scope-partial" : ""}">${escapeHtml(relatedScopeNote(group, data.window_hours))}</p>
         ${group.alerts?.length
           ? `<div class="related-list">${group.alerts.map(renderRelatedAlert).join("")}</div>`
-          : '<p class="detail-empty">No other alerts matched in this window.</p>'}
+          : '<p class="detail-empty">Ninguna otra alerta coincidió en esta ventana.</p>'}
       </div>`).join("")}`;
 }
 
@@ -988,11 +988,11 @@ function renderInvestigation(data) {
 }
 
 function renderInvestigationUnavailable() {
-  const message = '<p class="detail-empty">Related activity is temporarily unavailable.</p>';
+  const message = '<p class="detail-empty">La actividad relacionada no está disponible temporalmente.</p>';
   const recurrenceHost = document.getElementById("recurrencePanel");
   const relatedHost = document.getElementById("relatedPanel");
-  if (recurrenceHost) recurrenceHost.innerHTML = `<h3>Recurrence</h3>${message}`;
-  if (relatedHost) relatedHost.innerHTML = `<h3>Related activity</h3>${message}`;
+  if (recurrenceHost) recurrenceHost.innerHTML = `<h3>Recurrencia</h3>${message}`;
+  if (relatedHost) relatedHost.innerHTML = `<h3>Actividad relacionada</h3>${message}`;
 }
 
 function renderDetail(verdict) {
@@ -1005,114 +1005,114 @@ function renderDetail(verdict) {
   const destinationAsset = verdict.asset_context?.destination;
   const isPolicy = verdict.model_used === "prefilter";
   const configurationActions = mode === "demo" ? "" : `<section class="analysis-section">
-      <h3>Configuration actions</h3>
-      <p class="boundary-note">Start from this retained evidence. A separate in-memory <code>config:write</code> key is still required.</p>
+      <h3>Acciones de configuración</h3>
+      <p class="boundary-note">Parte de esta evidencia retenida. Aún se requiere una clave <code>config:write</code> independiente, guardada solo en memoria.</p>
       <div class="detail-feedback-actions">
-        ${sensor === "suricata" && verdict.signature_id != null ? '<button class="action-btn" type="button" data-config-from-alert="prefilter">Draft scoped policy rule</button>' : ""}
-        ${assetEndpointIsEditable(verdict.src_ip) ? '<button class="action-btn" type="button" data-config-from-alert="asset-source">Edit source asset</button>' : ""}
-        ${assetEndpointIsEditable(verdict.dest_ip) ? '<button class="action-btn" type="button" data-config-from-alert="asset-destination">Edit destination asset</button>' : ""}
+        ${sensor === "suricata" && verdict.signature_id != null ? '<button class="action-btn" type="button" data-config-from-alert="prefilter">Redactar regla de política acotada</button>' : ""}
+        ${assetEndpointIsEditable(verdict.src_ip) ? '<button class="action-btn" type="button" data-config-from-alert="asset-source">Editar activo de origen</button>' : ""}
+        ${assetEndpointIsEditable(verdict.dest_ip) ? '<button class="action-btn" type="button" data-config-from-alert="asset-destination">Editar activo de destino</button>' : ""}
       </div>
     </section>`;
   const reviewSection = verdict.human_verdict
     ? `<section class="analysis-section">
-        <h3>Operator review</h3>
+        <h3>Revisión del operador</h3>
         <dl class="detail-grid">
-          ${detailField("Decision", verdict.agreed ? "Agreed" : "Corrected")}
-          ${detailField("Human verdict", verdict.human_verdict)}
-          ${detailField("Reviewed at", formatTimestamp(verdict.reviewed_at))}
-          ${detailField("Notes", verdict.human_notes || "No note recorded")}
+          ${detailField("Decisión", verdict.agreed ? "De acuerdo" : "Corregido")}
+          ${detailField("Veredicto humano", verdictDisplay(verdict.human_verdict))}
+          ${detailField("Revisado el", formatTimestamp(verdict.reviewed_at))}
+          ${detailField("Notas", verdict.human_notes || "Sin nota registrada")}
         </dl>
       </section>`
     : mode === "demo"
-      ? '<section class="analysis-section"><h3>Operator review</h3><p class="detail-empty">Feedback is disabled in demo mode.</p></section>'
+      ? '<section class="analysis-section"><h3>Revisión del operador</h3><p class="detail-empty">La retroalimentación está deshabilitada en el modo demo.</p></section>'
       : `<section class="analysis-section">
-          <h3>Operator review</h3>
-          <label class="detail-note-label" for="detailNotes">Optional note
-            <textarea id="detailNotes" maxlength="2000" placeholder="Record the reason for this review"></textarea>
+          <h3>Revisión del operador</h3>
+          <label class="detail-note-label" for="detailNotes">Nota opcional
+            <textarea id="detailNotes" maxlength="2000" placeholder="Registra el motivo de esta revisión"></textarea>
           </label>
           <div class="detail-feedback-actions">
-            <button class="action-btn action-primary" type="button" data-detail-feedback="${escapeHtml(verdict.verdict)}">Agree with ${escapeHtml(String(verdict.verdict).replace("_", " "))}</button>
-            <button class="action-btn" type="button" data-detail-feedback="real">Mark real</button>
-            <button class="action-btn" type="button" data-detail-feedback="false_positive">Mark false positive</button>
-            <button class="action-btn" type="button" data-detail-feedback="uncertain">Mark uncertain</button>
+            <button class="action-btn action-primary" type="button" data-detail-feedback="${escapeHtml(verdict.verdict)}">Estoy de acuerdo con ${escapeHtml(verdictDisplay(verdict.verdict))}</button>
+            <button class="action-btn" type="button" data-detail-feedback="real">Marcar como real</button>
+            <button class="action-btn" type="button" data-detail-feedback="false_positive">Marcar como falso positivo</button>
+            <button class="action-btn" type="button" data-detail-feedback="uncertain">Marcar como incierto</button>
           </div>
         </section>`;
 
   const currentBoundary = isPolicy
-    ? `<li><span class="integrity-check">✓</span><div><strong>Model bypassed</strong><small>Deterministic policy resolved this event without an LLM call.</small></div></li>`
-    : `<li><span class="integrity-check">✓</span><div><strong>Canary response check</strong><small>Current classifier scans raw and decoded model output.</small></div></li>
-       <li><span class="integrity-check">✓</span><div><strong>Strict response contract</strong><small>Only the complete three-field JSON schema is accepted.</small></div></li>
-       <li><span class="integrity-check">✓</span><div><strong>${sensor === "wazuh" ? "Bounded Wazuh projection" : "Fail-closed Suricata isolation"}</strong><small>Current source-specific model boundary.</small></div></li>`;
+    ? `<li><span class="integrity-check">✓</span><div><strong>Modelo omitido</strong><small>La política determinista resolvió este evento sin una llamada al modelo.</small></div></li>`
+    : `<li><span class="integrity-check">✓</span><div><strong>Verificación de canario en la respuesta</strong><small>El clasificador actual analiza la salida del modelo en bruto y decodificada.</small></div></li>
+       <li><span class="integrity-check">✓</span><div><strong>Contrato de respuesta estricto</strong><small>Solo se acepta el esquema JSON completo de tres campos.</small></div></li>
+       <li><span class="integrity-check">✓</span><div><strong>${sensor === "wazuh" ? "Proyección acotada de Wazuh" : "Aislamiento Suricata con fallo cerrado"}</strong><small>Límite del modelo actual específico para esta fuente.</small></div></li>`;
 
   document.getElementById("detailPageContent").innerHTML = `
     <div class="detail-page-grid">
       <article class="detail-evidence-column">
         <div class="detail-event-meta">
-          <span class="badge badge-${escapeHtml(verdict.verdict)}">${escapeHtml(String(verdict.verdict ?? "unknown").replace("_", " "))}</span>
+          <span class="badge badge-${escapeHtml(verdict.verdict)}">${escapeHtml(verdictDisplay(verdict.verdict))}</span>
           <span>${escapeHtml(formatTimestamp(verdict.timestamp))}</span>
-          <span>${sensor === "wazuh" ? "RULE" : "SID"} ${escapeHtml(verdict.signature_id ?? "—")}</span>
+          <span>${sensor === "wazuh" ? "REGLA" : "SID"} ${escapeHtml(verdict.signature_id ?? "—")}</span>
         </div>
-        <h1 id="alert-page-title">${escapeHtml(verdict.signature ?? "Unnamed alert")}</h1>
+        <h1 id="alert-page-title">${escapeHtml(verdict.signature ?? "Alerta sin nombre")}</h1>
 
         <dl class="endpoint-grid">
-          ${detailField("Source", verdict.src_ip ? `${verdict.src_ip}:${verdict.src_port ?? "?"}` : agent?.name ?? agent?.id)}
-          ${detailField("Destination", verdict.dest_ip ? `${verdict.dest_ip}:${verdict.dest_port ?? "?"}` : null)}
-          ${detailField("Protocol", verdict.proto)}
-          ${detailField("Source type", sensor)}
+          ${detailField("Origen", verdict.src_ip ? `${verdict.src_ip}:${verdict.src_port ?? "?"}` : agent?.name ?? agent?.id)}
+          ${detailField("Destino", verdict.dest_ip ? `${verdict.dest_ip}:${verdict.dest_port ?? "?"}` : null)}
+          ${detailField("Protocolo", verdict.proto)}
+          ${detailField("Tipo de origen", sensor)}
         </dl>
 
         <section class="detail-section">
-          <h3>Decision context</h3>
+          <h3>Contexto de la decisión</h3>
           <dl class="detail-grid detail-facts">
-            ${detailField("Category", verdict.category)}
-            ${detailField("Severity", verdict.severity)}
-            ${detailField("Processed", formatTimestamp(verdict.processed_at))}
-            ${detailField("Database event ID", verdict.id)}
-            ${detailField("Source instance", verdict.sensor_context?.instance)}
-            ${detailField("Source event ID", verdict.sensor_context?.event_id)}
-            ${detailField("Source asset", sourceAsset?.hostname ? `${sourceAsset.hostname} · ${sourceAsset.role ?? "asset"} · ${sourceAsset.criticality ?? "unknown"}` : null)}
-            ${detailField("Destination asset", destinationAsset?.hostname ? `${destinationAsset.hostname} · ${destinationAsset.role ?? "asset"} · ${destinationAsset.criticality ?? "unknown"}` : null)}
+            ${detailField("Categoría", verdict.category)}
+            ${detailField("Severidad", verdict.severity)}
+            ${detailField("Procesado", formatTimestamp(verdict.processed_at))}
+            ${detailField("ID de evento en la base de datos", verdict.id)}
+            ${detailField("Instancia de origen", verdict.sensor_context?.instance)}
+            ${detailField("ID de evento de origen", verdict.sensor_context?.event_id)}
+            ${detailField("Activo de origen", sourceAsset?.hostname ? `${sourceAsset.hostname} · ${sourceAsset.role ?? "activo"} · ${sourceAsset.criticality ?? "desconocido"}` : null)}
+            ${detailField("Activo de destino", destinationAsset?.hostname ? `${destinationAsset.hostname} · ${destinationAsset.role ?? "activo"} · ${destinationAsset.criticality ?? "desconocido"}` : null)}
           </dl>
         </section>
 
         ${renderSourceContext(verdict, sensor)}
 
         <section class="detail-section" id="relatedPanel">
-          <h3>Related activity</h3>
-          <p class="detail-empty">Loading related activity…</p>
+          <h3>Actividad relacionada</h3>
+          <p class="detail-empty">Cargando actividad relacionada…</p>
         </section>
 
         <section class="detail-section raw-section">
           <div class="raw-head">
-            <div><h3>Original sensor record</h3><p>Stored source evidence. The exact protected model projection is not persisted.</p></div>
-            ${rawAlert ? '<button id="copyRawButton" class="text-button" type="button">Copy JSON</button>' : ""}
+            <div><h3>Registro original del sensor</h3><p>Evidencia de origen almacenada. La proyección exacta y protegida enviada al modelo no se conserva.</p></div>
+            ${rawAlert ? '<button id="copyRawButton" class="text-button" type="button">Copiar JSON</button>' : ""}
           </div>
-          ${rawAlert ? `<pre class="raw-event">${escapeHtml(rawAlert)}</pre>` : '<p class="detail-empty">Original sensor record unavailable for this record.</p>'}
+          ${rawAlert ? `<pre class="raw-event">${escapeHtml(rawAlert)}</pre>` : '<p class="detail-empty">Registro original del sensor no disponible para este registro.</p>'}
         </section>
       </article>
 
       <aside class="detail-analysis-column">
         <section class="model-verdict-panel">
-          <span class="analysis-label">${isPolicy ? "POLICY VERDICT" : "MODEL VERDICT"}</span>
-          <div class="verdict-score"><strong class="verdict-color-${escapeHtml(verdict.verdict)}">${escapeHtml(String(verdict.verdict ?? "unknown").replace("_", " "))}</strong><span>confidence ${(confidence / 100).toFixed(2)}</span></div>
+          <span class="analysis-label">${isPolicy ? "VEREDICTO DE POLÍTICA" : "VEREDICTO DEL MODELO"}</span>
+          <div class="verdict-score"><strong class="verdict-color-${escapeHtml(verdict.verdict)}">${escapeHtml(verdictDisplay(verdict.verdict))}</strong><span>confianza ${(confidence / 100).toFixed(2)}</span></div>
           <div class="confidence-track"><span style="width:${confidence}%"></span></div>
           <p class="model-meta">${escapeHtml(shortModelName(verdict.model_used))}</p>
         </section>
 
         <section class="analysis-section" id="recurrencePanel">
-          <h3>Recurrence</h3>
-          <p class="detail-empty">Loading recurrence…</p>
+          <h3>Recurrencia</h3>
+          <p class="detail-empty">Cargando recurrencia…</p>
         </section>
 
         <section class="analysis-section">
-          <h3>Reasoning</h3>
-          <p class="analysis-reasoning">${escapeHtml(verdict.reasoning ?? "No reasoning recorded.")}</p>
+          <h3>Razonamiento</h3>
+          <p class="analysis-reasoning">${escapeHtml(verdict.reasoning ?? "No se registró razonamiento.")}</p>
         </section>
 
         <section class="analysis-section">
-          <h3>Current model boundary</h3>
+          <h3>Límite actual del modelo</h3>
           <ul class="detail-integrity-list">${currentBoundary}</ul>
-          <p class="boundary-note">This is current classifier posture, not a per-event attestation for historical rows.</p>
+          <p class="boundary-note">Esta es la postura actual del clasificador, no una certificación por evento para registros históricos.</p>
         </section>
 
         ${configurationActions}
@@ -1120,7 +1120,7 @@ function renderDetail(verdict) {
       </aside>
     </div>`;
 
-  document.title = `${verdict.signature ?? "Alert detail"} — Triagewall`;
+  document.title = `${verdict.signature ?? "Detalle de alerta"} — Triagewall`;
   renderDetailNavigation(null);
 }
 
@@ -1135,8 +1135,8 @@ function renderDetailNavigation(neighbors) {
   nextButton.disabled = !next;
   previousButton.dataset.eventId = previous?.id ?? "";
   nextButton.dataset.eventId = next?.id ?? "";
-  previousButton.title = previous?.signature ? `Previous: ${previous.signature}` : "";
-  nextButton.title = next?.signature ? `Next: ${next.signature}` : "";
+  previousButton.title = previous?.signature ? `Anterior: ${previous.signature}` : "";
+  nextButton.title = next?.signature ? `Siguiente: ${next.signature}` : "";
 }
 
 async function loadInvestigation(eventId, navigation) {
@@ -1158,7 +1158,7 @@ async function loadInvestigation(eventId, navigation) {
       { cache: "no-store", signal },
     );
     if (!detailRequestIsCurrent(generation, eventId)) return;
-    if (!response.ok) throw new Error(`Investigation request failed (${response.status})`);
+    if (!response.ok) throw new Error(`La solicitud de investigación falló (${response.status})`);
     const data = await response.json();
     if (!detailRequestIsCurrent(generation, eventId)) return;
     const responseSearchWindow = typeof data.search_window === "string"
@@ -1168,7 +1168,7 @@ async function loadInvestigation(eventId, navigation) {
       Boolean(normalizedSignature(filter.signature))
       !== Boolean(responseSearchWindow)
     ) {
-      throw new Error("Investigation search returned invalid window state");
+      throw new Error("La búsqueda de investigación devolvió un estado de ventana inválido");
     }
     // A direct searched detail has no queue token to carry in. Publish the
     // freshly captured identity only after this response still owns the route,
@@ -1205,7 +1205,7 @@ async function loadDetail(eventId, navigation = beginDetailNavigation()) {
       signal,
     });
     if (!detailRequestIsCurrent(generation, eventId)) return;
-    if (!response.ok) throw new Error(response.status === 404 ? "Alert not found." : `Alert request failed (${response.status})`);
+    if (!response.ok) throw new Error(response.status === 404 ? "Alerta no encontrada." : `La solicitud de la alerta falló (${response.status})`);
     const data = await response.json();
     if (!detailRequestIsCurrent(generation, eventId)) return;
     mode = data.mode;
@@ -1214,7 +1214,7 @@ async function loadDetail(eventId, navigation = beginDetailNavigation()) {
   } catch (error) {
     if (!detailRequestIsCurrent(generation, eventId)) return;
     activeInvestigation = null;
-    document.getElementById("detailPageContent").innerHTML = `<div class="empty-card"><div><strong>${escapeHtml(error.message)}</strong><span>Return to the queue and choose another alert.</span></div></div>`;
+    document.getElementById("detailPageContent").innerHTML = `<div class="empty-card"><div><strong>${escapeHtml(error.message)}</strong><span>Vuelve a la cola y elige otra alerta.</span></div></div>`;
     renderDetailNavigation(null);
     return;
   }
@@ -1342,8 +1342,8 @@ async function feedback(id, agentVerdict, customVerdict = null, notes = "") {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ human_verdict: humanVerdict, notes }),
     });
-    if (!response.ok) throw new Error(`Feedback was not saved (${response.status})`);
-    showToast("Operator feedback saved.");
+    if (!response.ok) throw new Error(`No se guardó la retroalimentación (${response.status})`);
+    showToast("Retroalimentación del operador guardada.");
     // The server has committed, so the in-memory row is corrected wherever the
     // operator now is. Route ownership decides what may be re-rendered, not
     // whether the write is recorded.
@@ -1365,7 +1365,7 @@ async function feedback(id, agentVerdict, customVerdict = null, notes = "") {
     // Route ownership guards DOM reloads, not write-result notifications.
     // Navigating away must never hide that a review failed to save, so this
     // names the alert and reports wherever the operator is.
-    showToast(`Alert ${eventId}: ${error.message}`, true);
+    showToast(`Alerta ${eventId}: ${error.message}`, true);
   } finally {
     pendingFeedback.delete(eventId);
   }
@@ -1438,6 +1438,14 @@ function setActive(selector, dataKey, value) {
   document.querySelectorAll(selector).forEach((button) => {
     button.classList.toggle("active", button.dataset[dataKey] === value);
   });
+}
+
+// Display-only translation of the internal verdict values (real,
+// false_positive, uncertain). The internal value itself — used for CSS
+// classes, filters, and API calls — is never touched by this.
+function verdictDisplay(value) {
+  const labels = { real: "Real", false_positive: "Falso positivo", uncertain: "Incierto" };
+  return labels[value] ?? "Desconocido";
 }
 
 function escapeHtml(value) {
@@ -1556,9 +1564,9 @@ document.getElementById("detailPageContent").addEventListener("click", async (ev
     if (!rawAlert) return;
     try {
       await navigator.clipboard.writeText(rawAlert);
-      showToast("Raw event copied.");
+      showToast("Evento en bruto copiado.");
     } catch (_error) {
-      showToast("Clipboard access was unavailable.", true);
+      showToast("El acceso al portapapeles no estaba disponible.", true);
     }
   }
 });

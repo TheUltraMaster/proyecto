@@ -1,145 +1,138 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="TriageWall operator console for local Suricata and Wazuh alert triage.">
-  <title>TriageWall — Operator console</title>
+  <meta name="description" content="Consola de operador de TriageWall para el triage local de alertas de Suricata y Wazuh.">
+  <title>Consola de operador</title>
   <link rel="icon" href="/static/triagewall-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/dashboard.css">
 </head>
 <body class="view-loading">
   <div id="app" class="app-shell">
-    <aside class="sidebar" aria-label="Primary navigation">
-      <a class="brand" href="/triage" aria-label="TriageWall triage queue">
+    <aside class="sidebar" aria-label="Navegación principal">
+      <a class="brand" href="/triage" aria-label="Cola de triage de TriageWall">
         <img class="brand-mark" src="/static/triagewall-mark.svg" alt="" aria-hidden="true">
-        <strong>TriageWall</strong>
+        <strong>Sentinela</strong>
       </a>
 
-      <nav class="side-nav" aria-label="Console sections">
+      <nav class="side-nav" aria-label="Secciones de la consola">
         <a href="/overview" data-view-link="overview">
-          Overview
+          Resumen
         </a>
         <a href="/triage" data-view-link="triage">
-          Triage queue
-          <span id="sidebarQueueCount" class="nav-count" title="Unreviewed model decisions in the last 24 hours, across all filters">—</span>
-          <span class="sr-only">unreviewed model decisions in the last 24 hours, across all filters</span>
+          Cola
+          <span id="sidebarQueueCount" class="nav-count" title="Decisiones del modelo sin revisar en las últimas 24 horas, en todos los filtros">—</span>
+          <span class="sr-only">decisiones del modelo sin revisar en las últimas 24 horas, en todos los filtros</span>
         </a>
-        <a href="/behavioral" data-view-link="behavioral">
-          Behavioral signals
-        </a>
+  
         <a href="/integrity" data-view-link="integrity">
-          Integrity
+          Integridad
         </a>
-        <a href="/configuration" data-view-link="configuration">
-          Configuration
-        </a>
+   
       </nav>
 
-      <div class="system-card" aria-label="System status">
+      <div class="system-card" aria-label="Estado del sistema">
         <div class="system-card-head">
-          <span>System</span>
+          <span>Sistema</span>
           <span class="status-dot" id="healthDot" aria-hidden="true"></span>
         </div>
-        <strong id="healthLabel">Connecting</strong>
+        <strong id="healthLabel">Conectando</strong>
         <dl>
-          <div><dt>Last event</dt><dd id="lastSeen">—</dd></div>
-          <div><dt>Storage</dt><dd id="storageMeta">—</dd></div>
-          <div><dt>Lifetime</dt><dd id="lifetimeTotal">—</dd></div>
+          <div><dt>Último evento</dt><dd id="lastSeen">—</dd></div>
+          <div><dt>Almacenamiento</dt><dd id="storageMeta">—</dd></div>
+          <div><dt>Total histórico</dt><dd id="lifetimeTotal">—</dd></div>
         </dl>
       </div>
 
-      <div class="sidebar-foot">
-        <span>Local-first · no telemetry</span>
-        <a href="https://github.com/aaronphifer/triagewall" target="_blank" rel="noreferrer">Source code ↗</a>
-      </div>
+     
     </aside>
 
     <main class="main-content">
       <div id="demoBanner" class="notice notice-demo hidden" role="status">
-        <strong>Demo workspace</strong>
-        <span>Addresses are masked and feedback is disabled.</span>
+        <strong>Espacio de trabajo de demostración</strong>
+        <span>Las direcciones están enmascaradas y la retroalimentación está deshabilitada.</span>
       </div>
 
       <div id="staleBanner" class="notice notice-warning hidden" role="alert">
-        <strong>Ingestion needs attention.</strong>
-        <span id="staleBannerText">The latest event is outside the expected freshness window.</span>
+        <strong>La ingesta necesita atención.</strong>
+        <span id="staleBannerText">El evento más reciente está fuera de la ventana de frescura esperada.</span>
       </div>
 
       <section class="view-panel" data-view="triage" aria-labelledby="queue-title">
         <header class="view-header queue-header">
           <div class="queue-title-line">
-            <h1 id="queue-title">Triage queue</h1>
-            <span id="queueMeta">Loading decisions…</span>
+            <h1 id="queue-title">Cola</h1>
+            <span id="queueMeta">Cargando decisiones…</span>
           </div>
           <div class="queue-header-tools">
             <label class="search-field queue-search" for="sigFilter">
-              <span class="sr-only">Search alerts by signature, IP address, or historical asset hostname</span>
-              <input id="sigFilter" type="search" maxlength="200" placeholder="signature, IP, or asset…">
+              <span class="sr-only">Buscar alertas por firma, dirección IP o nombre de host del activo histórico</span>
+              <input id="sigFilter" type="search" maxlength="200" placeholder="firma, IP o activo…">
             </label>
-            <button id="filterToggleButton" class="text-button" type="button" aria-expanded="false">Filters</button>
-            <span class="live-chip"><span class="live-pulse" aria-hidden="true"></span><span id="freshness">Connecting</span></span>
+            <button id="filterToggleButton" class="text-button" type="button" aria-expanded="false">Filtros</button>
+            <span class="live-chip"><span class="live-pulse" aria-hidden="true"></span><span id="freshness">Conectando</span></span>
           </div>
         </header>
 
         <div class="queue-sticky">
-        <div class="queue-summary" aria-label="Queue summary and verdict filters" aria-describedby="queueScopeNote">
-          <button class="filter-btn queue-tag active" data-verdict="" type="button">All model <span id="queueAllCount">—</span></button>
+        <div class="queue-summary" aria-label="Resumen de la cola y filtros de veredicto" aria-describedby="queueScopeNote">
+          <button class="filter-btn queue-tag active" data-verdict="" type="button">Todo el modelo <span id="queueAllCount">—</span></button>
           <button class="filter-btn queue-tag" data-verdict="real" type="button">Real <span id="queueRealCount">—</span></button>
-          <button class="filter-btn queue-tag" data-verdict="uncertain" type="button">Uncertain <span id="queueUncertainCount">—</span></button>
-          <button class="filter-btn queue-tag" data-verdict="false_positive" type="button">False positive <span id="queueFalsePositiveCount">—</span></button>
-          <button id="unreviewedQuickFilter" class="queue-tag" type="button">Unreviewed <span id="queueUnreviewedCount">—</span></button>
-          <span class="queue-sort">sorted by newest ↓</span>
+          <button class="filter-btn queue-tag" data-verdict="uncertain" type="button">Incierto <span id="queueUncertainCount">—</span></button>
+          <button class="filter-btn queue-tag" data-verdict="false_positive" type="button">Falso positivo <span id="queueFalsePositiveCount">—</span></button>
+          <button id="unreviewedQuickFilter" class="queue-tag" type="button">Sin revisar <span id="queueUnreviewedCount">—</span></button>
+          <span class="queue-sort">ordenado por más reciente ↓</span>
         </div>
         <p id="queueScopeNote" class="queue-scope-note">
-          These counts are global totals of model decisions from the last 24 hours.
-          They stay the same whichever filters, path, or page you select below —
-          including Policy, source, and review filters, which never change them.
+          Estos totales son cifras globales de decisiones del modelo en las últimas 24 horas.
+          Permanecen iguales sin importar qué filtros, ruta o página elijas abajo —
+          incluyendo los filtros de Política, origen y revisión, que nunca los modifican.
         </p>
 
-        <div id="advancedFilters" class="filter-bar hidden" aria-label="Additional decision filters">
+        <div id="advancedFilters" class="filter-bar hidden" aria-label="Filtros adicionales de decisión">
           <div class="filter-group">
-            <span class="filter-label">Path</span>
-            <div class="segmented" role="group" aria-label="Filter by decision path">
-              <button class="model-btn active" data-model="llm" type="button">Model</button>
-              <button class="model-btn" data-model="prefilter" type="button">Policy</button>
-              <button class="model-btn" data-model="" type="button">All</button>
+            <span class="filter-label">Ruta</span>
+            <div class="segmented" role="group" aria-label="Filtrar por ruta de decisión">
+              <button class="model-btn active" data-model="llm" type="button">Modelo</button>
+              <button class="model-btn" data-model="prefilter" type="button">Política</button>
+              <button class="model-btn" data-model="" type="button">Todos</button>
             </div>
           </div>
           <label class="select-field" for="sourceFilter">
-            <span>Source</span>
+            <span>Origen</span>
             <select id="sourceFilter">
-              <option value="">All sources</option>
+              <option value="">Todos los orígenes</option>
               <option value="suricata">Suricata</option>
               <option value="wazuh">Wazuh</option>
             </select>
           </label>
           <label class="select-field" for="reviewFilter">
-            <span>Review</span>
+            <span>Revisión</span>
             <select id="reviewFilter">
-              <option value="">Any state</option>
-              <option value="unreviewed">Unreviewed</option>
-              <option value="agreed">Agreed</option>
-              <option value="corrected">Corrected</option>
+              <option value="">Cualquier estado</option>
+              <option value="unreviewed">Sin revisar</option>
+              <option value="agreed">De acuerdo</option>
+              <option value="corrected">Corregido</option>
             </select>
           </label>
         </div>
 
         <div class="decision-columns" aria-hidden="true">
-          <span>Time</span>
-          <span>Signature</span>
-          <span>Source</span>
-          <span>Destination</span>
-          <span>Verdict</span>
+          <span>Hora</span>
+          <span>Firma</span>
+          <span>Origen</span>
+          <span>Destino</span>
+          <span>Veredicto</span>
           <span>Conf.</span>
         </div>
         </div>
         <div id="verdicts" class="decision-list" aria-live="polite"></div>
         <div class="queue-footer" id="queueFooter">
-          <span id="paginationMeta">Newest decisions load automatically.</span>
+          <span id="paginationMeta">Las decisiones más recientes se cargan automáticamente.</span>
           <div>
-            <button id="returnLiveButton" class="text-button hidden" type="button">Return to live</button>
-            <button id="loadOlderButton" class="text-button hidden" type="button">Load older</button>
+            <button id="returnLiveButton" class="text-button hidden" type="button">Volver a en vivo</button>
+            <button id="loadOlderButton" class="text-button hidden" type="button">Cargar anteriores</button>
           </div>
         </div>
       </section>
@@ -147,84 +140,84 @@
       <section class="view-panel" data-view="overview" aria-labelledby="overview-title" hidden>
         <header class="view-header">
           <div>
-            <p class="view-context">SYSTEM</p>
-            <h1 id="overview-title">Overview</h1>
+            <p class="view-context">SISTEMA</p>
+            <h1 id="overview-title">Resumen</h1>
           </div>
-          <span class="view-meta" id="timelineMeta">Loading activity</span>
+          <span class="view-meta" id="timelineMeta">Cargando actividad</span>
         </header>
 
-        <section class="prefilter-hero panel" aria-label="Twenty-four hour decision flow">
+        <section class="prefilter-hero panel" aria-label="Flujo de decisiones de las últimas veinticuatro horas">
           <div class="prefilter-hero-head">
             <div>
-              <span class="metric-label">Last 24 hours</span>
-              <div class="prefilter-rate"><strong id="prefilterRate">—</strong><span>% resolved before the model</span></div>
+              <span class="metric-label">Últimas 24 horas</span>
+              <div class="prefilter-rate"><strong id="prefilterRate">—</strong><span>% resuelto antes del modelo</span></div>
             </div>
-            <div class="lifetime-total"><span>Lifetime decisions</span><strong id="overviewLifetime">—</strong></div>
+            <div class="lifetime-total"><span>Decisiones históricas</span><strong id="overviewLifetime">—</strong></div>
           </div>
-          <div class="pipeline-band" aria-label="Policy and model decision share">
+          <div class="pipeline-band" aria-label="Reparto de decisiones entre política y modelo">
             <span id="policyBand" class="policy-band"></span><span id="modelBand" class="model-band"></span>
           </div>
           <div class="pipeline-legend">
-            <span><i class="policy-key"></i><strong id="policyCount">—</strong> policy resolved</span>
-            <span><i class="model-key"></i><strong id="modelCount">—</strong> sent to local model</span>
+            <span><i class="policy-key"></i><strong id="policyCount">—</strong> resueltas por política</span>
+            <span><i class="model-key"></i><strong id="modelCount">—</strong> enviadas al modelo local</span>
             <span id="newDecisionCount">— total</span>
           </div>
         </section>
 
-        <section class="metric-grid" aria-label="Current triage status">
+        <section class="metric-grid" aria-label="Estado actual del triage">
           <article class="metric-card metric-real">
             <span class="metric-label">Real</span>
             <strong id="realCount">—</strong>
-            <span>Last 24 hours</span>
+            <span>Últimas 24 horas</span>
           </article>
           <article class="metric-card">
-            <span class="metric-label">False positive</span>
+            <span class="metric-label">Falso positivo</span>
             <strong id="falsePositiveCount">—</strong>
-            <span>Includes deterministic policy</span>
+            <span>Incluye política determinista</span>
           </article>
           <article class="metric-card metric-attention">
-            <span class="metric-label">Uncertain</span>
+            <span class="metric-label">Incierto</span>
             <strong id="uncertainCount">—</strong>
-            <span>Queued for operator review</span>
+            <span>En cola para revisión del operador</span>
           </article>
           <article class="metric-card">
-            <span class="metric-label">Operator agreement</span>
+            <span class="metric-label">Acuerdo del operador</span>
             <strong id="agreementRate">—</strong>
-            <span id="agreementDetail">No reviews in this window</span>
+            <span id="agreementDetail">Sin revisiones en esta ventana</span>
           </article>
         </section>
 
-        <div class="overview-grid" aria-label="Activity and operating posture">
+        <div class="overview-grid" aria-label="Actividad y postura operativa">
           <article class="panel activity-panel">
             <div class="panel-head">
               <div>
-                <p class="section-kicker">Decision volume</p>
-                <h2>Last 24 hours</h2>
+                <p class="section-kicker">Volumen de decisiones</p>
+                <h2>Últimas 24 horas</h2>
               </div>
-              <div class="chart-legend" aria-label="Chart legend">
-                <span><i class="legend-bar"></i>Events</span>
-                <span><i class="legend-line"></i>Policy resolved</span>
+              <div class="chart-legend" aria-label="Leyenda del gráfico">
+                <span><i class="legend-bar"></i>Eventos</span>
+                <span><i class="legend-line"></i>Resueltos por política</span>
               </div>
             </div>
-            <div id="timelineChart" class="timeline-chart" role="img" aria-label="Event volume and policy-resolution rate over the last 24 hours">
-              <div class="loading-state">Loading decision volume…</div>
+            <div id="timelineChart" class="timeline-chart" role="img" aria-label="Volumen de eventos y tasa de resolución por política en las últimas 24 horas">
+              <div class="loading-state">Cargando volumen de decisiones…</div>
             </div>
           </article>
 
           <article class="panel posture-panel">
             <div class="panel-head">
               <div>
-                <p class="section-kicker">Operating posture</p>
-                <h2>Pipeline status</h2>
+                <p class="section-kicker">Postura operativa</p>
+                <h2>Estado del pipeline</h2>
               </div>
             </div>
             <div class="posture-stack">
-              <div class="posture-row"><span>Ingest</span><strong id="postureIngest">Connecting</strong></div>
-              <div class="posture-row"><span>Decision path</span><strong>Policy → Local model</strong></div>
-              <div class="posture-row"><span>Sources</span><strong>Suricata + Wazuh</strong></div>
-              <div class="posture-row"><span>Data boundary</span><strong>Local only</strong></div>
+              <div class="posture-row"><span>Ingesta</span><strong id="postureIngest">Conectando</strong></div>
+              <div class="posture-row"><span>Ruta de decisión</span><strong>Política → Modelo local</strong></div>
+              <div class="posture-row"><span>Orígenes</span><strong>Suricata + Wazuh</strong></div>
+              <div class="posture-row"><span>Límite de datos</span><strong>Solo local</strong></div>
             </div>
-            <p class="posture-note">Reads sensor streams and records decisions. It does not change sensor rules or take response actions.</p>
+            <p class="posture-note">Lee los flujos de los sensores y registra decisiones. No modifica las reglas de los sensores ni ejecuta acciones de respuesta.</p>
           </article>
         </div>
       </section>
@@ -232,17 +225,17 @@
       <section class="view-panel" data-view="behavioral" aria-labelledby="behavioral-signal" hidden>
         <header class="view-header">
           <div>
-            <p class="view-context">INDEPENDENT DETECTION</p>
-            <h1 id="behavioral-signal">Behavioral signals</h1>
+            <p class="view-context">DETECCIÓN INDEPENDIENTE</p>
+            <h1 id="behavioral-signal">Señales de comportamiento</h1>
           </div>
-          <p class="view-description">Statistical deviations evaluated separately from model verdicts.</p>
+          <p class="view-description">Desviaciones estadísticas evaluadas por separado de los veredictos del modelo.</p>
         </header>
 
-        <section id="spcPanel" class="panel signal-panel hidden" aria-label="Behavioral deviations">
+        <section id="spcPanel" class="panel signal-panel hidden" aria-label="Desviaciones de comportamiento">
           <div class="panel-head">
             <div>
-              <p class="section-kicker">RECENT DEVIATIONS</p>
-              <h2>Observed changes</h2>
+              <p class="section-kicker">DESVIACIONES RECIENTES</p>
+              <h2>Cambios observados</h2>
             </div>
             <span class="signal-count" id="spcMeta"></span>
           </div>
@@ -253,169 +246,160 @@
       <section class="view-panel" data-view="integrity" aria-labelledby="integrity-title" hidden>
         <header class="view-header">
           <div>
-            <p class="view-context">MODEL BOUNDARY</p>
-            <h1 id="integrity-title">Integrity</h1>
+            <p class="view-context">LÍMITE DEL MODELO</p>
+            <h1 id="integrity-title">Integridad</h1>
           </div>
-          <p class="view-description">Implemented controls — not inferred incident counters.</p>
+          <p class="view-description">Controles implementados — no contadores de incidentes inferidos.</p>
         </header>
 
-        <section class="integrity-grid" aria-label="Implemented model-boundary controls">
+        <section class="integrity-grid" aria-label="Controles implementados en el límite del modelo">
           <article class="integrity-control">
-            <div class="control-head"><span>Canary response check</span><strong>IMPLEMENTED</strong></div>
-            <h2>Output leak detection</h2>
-            <p>A per-process secret is checked in both raw and decoded model output. A detected leak is conservatively classified as real for review.</p>
+            <div class="control-head"><span>Verificación de respuesta canario</span><strong>IMPLEMENTADO</strong></div>
+            <h2>Detección de fuga en la salida</h2>
+            <p>Se verifica un secreto por proceso tanto en la salida sin procesar como en la decodificada del modelo. Una fuga detectada se clasifica de forma conservadora como real para su revisión.</p>
             <code>triage._contains_canary</code>
           </article>
           <article class="integrity-control">
-            <div class="control-head"><span>Response contract</span><strong>FAIL CLOSED</strong></div>
-            <h2>Strict three-field JSON</h2>
-            <p>Only verdict, confidence, and reasoning are accepted. Malformed, partial, or extra-field responses become uncertain at zero confidence.</p>
+            <div class="control-head"><span>Contrato de respuesta</span><strong>FALLO CERRADO</strong></div>
+            <h2>JSON estricto de tres campos</h2>
+            <p>Solo se aceptan veredicto, confianza y razonamiento. Las respuestas malformadas, parciales o con campos adicionales se marcan como inciertas con confianza cero.</p>
             <code>triage._invalid_model_response</code>
           </article>
           <article class="integrity-control">
-            <div class="control-head"><span>Suricata projection</span><strong>FAIL CLOSED</strong></div>
-            <h2>Allowlisted structure</h2>
-            <p>Known structured metadata may remain plain. Free text, network content, new fields, and type mismatches are base64-encapsulated by default.</p>
+            <div class="control-head"><span>Proyección de Suricata</span><strong>FALLO CERRADO</strong></div>
+            <h2>Estructura en lista blanca</h2>
+            <p>Los metadatos estructurados conocidos pueden permanecer en texto plano. El texto libre, el contenido de red, los campos nuevos y los desajustes de tipo se encapsulan en base64 por defecto.</p>
             <code>field_isolation.format_alert_for_llm</code>
           </article>
           <article class="integrity-control">
-            <div class="control-head"><span>Wazuh projection</span><strong>BOUNDED</strong></div>
-            <h2>Source-specific isolation</h2>
-            <p>Strings are encapsulated and oversized evidence is truncated with a digest inside a fixed 32 KiB model-input budget.</p>
+            <div class="control-head"><span>Proyección de Wazuh</span><strong>ACOTADO</strong></div>
+            <h2>Aislamiento específico por origen</h2>
+            <p>Las cadenas se encapsulan y la evidencia de tamaño excesivo se trunca con un resumen dentro de un presupuesto fijo de 32 KiB para la entrada del modelo.</p>
             <code>wazuh_isolation.format_wazuh_for_llm</code>
           </article>
         </section>
 
         <div class="integrity-lower">
           <article class="panel defense-panel">
-            <div class="panel-head"><div><p class="section-kicker">DECISION PATH</p><h2>Defense chain</h2></div></div>
+            <div class="panel-head"><div><p class="section-kicker">RUTA DE DECISIÓN</p><h2>Cadena de defensa</h2></div></div>
             <ol class="defense-chain">
-              <li><span>01</span><div><strong>Project by source</strong><p>Only the bounded evidence shape for Suricata or Wazuh enters the model boundary.</p></div></li>
-              <li><span>02</span><div><strong>Encapsulate untrusted values</strong><p>Attacker-controlled strings are data inside explicit boundary markers, never trusted instructions.</p></div></li>
-              <li><span>03</span><div><strong>Validate the complete response</strong><p>The entire JSON response must match the exact contract before a verdict is accepted.</p></div></li>
-              <li><span>04</span><div><strong>Check the canary</strong><p>Raw and decoded output are scanned before the decision is persisted.</p></div></li>
+              <li><span>01</span><div><strong>Proyectar por origen</strong><p>Solo la forma de evidencia acotada para Suricata o Wazuh entra al límite del modelo.</p></div></li>
+              <li><span>02</span><div><strong>Encapsular valores no confiables</strong><p>Las cadenas controladas por el atacante son datos dentro de marcadores de límite explícitos, nunca instrucciones confiables.</p></div></li>
+              <li><span>03</span><div><strong>Validar la respuesta completa</strong><p>La respuesta JSON completa debe coincidir exactamente con el contrato antes de aceptar un veredicto.</p></div></li>
+              <li><span>04</span><div><strong>Verificar el canario</strong><p>La salida sin procesar y la decodificada se analizan antes de guardar la decisión.</p></div></li>
             </ol>
           </article>
 
-          <article class="panel evidence-panel">
-            <div class="panel-head"><div><p class="section-kicker">EVIDENCE SCOPE</p><h2>What this page claims</h2></div></div>
-            <p>This is a posture view of controls in the shipped classifier. The dashboard does not currently persist canary-hit history, schema-rejection counts, suspicious payload fragments, or exact prompts.</p>
-            <p class="scope-note">Accordingly, this page does not claim “zero breaches,” a seven-day completion total, or proof that no injection can succeed.</p>
-            <div class="evidence-links">
-              <a href="https://github.com/aaronphifer/triagewall/blob/main/docs/THREAT_MODEL.md" target="_blank" rel="noreferrer">Threat model ↗</a>
-              <a href="https://github.com/aaronphifer/triagewall/blob/main/docs/experiments/phase2_field_isolation.md" target="_blank" rel="noreferrer">Isolation evidence ↗</a>
-              <a href="https://github.com/aaronphifer/triagewall/blob/main/docs/release-evidence-v0.3.md" target="_blank" rel="noreferrer">v0.3 release evidence ↗</a>
-            </div>
-          </article>
+         
         </div>
       </section>
 
       <section class="view-panel configuration-page" data-view="configuration" aria-labelledby="configuration-title" hidden>
         <header class="view-header">
           <div>
-            <p class="view-context">OPERATOR CONTROL</p>
-            <h1 id="configuration-title">Configuration</h1>
+            <p class="view-context">CONTROL DEL OPERADOR</p>
+            <h1 id="configuration-title">Configuración</h1>
           </div>
-          <span class="view-status" id="configConnectionStatus">Credential required</span>
+          <span class="view-status" id="configConnectionStatus">Se requiere credencial</span>
         </header>
 
         <div class="configuration-shell">
           <section id="configCredentialPanel" class="panel config-credential-panel" aria-labelledby="config-credential-title">
             <div>
-              <p class="section-kicker">PRIVATE ADMINISTRATION</p>
-              <h2 id="config-credential-title">Connect with a configuration key</h2>
-              <p id="configCredentialHelp">The key must carry <code>config:write</code>. It is kept only in this page's memory and is cleared on reload or disconnect.</p>
+              <p class="section-kicker">ADMINISTRACIÓN PRIVADA</p>
+              <h2 id="config-credential-title">Conectar con una clave de configuración</h2>
+              <p id="configCredentialHelp">La clave debe tener el permiso <code>config:write</code>. Solo se guarda en la memoria de esta página y se borra al recargar o desconectar.</p>
             </div>
             <form id="configCredentialForm" class="config-credential-form" autocomplete="off">
-              <label for="configApiKey">API key
+              <label for="configApiKey">Clave de API
                 <input id="configApiKey" type="password" autocomplete="new-password" spellcheck="false" required>
               </label>
-              <button class="action-btn action-primary" type="submit">Connect</button>
+              <button class="action-btn action-primary" type="submit">Conectar</button>
             </form>
           </section>
 
           <div id="configWorkspace" class="config-workspace hidden">
-            <section class="config-summary-grid" aria-label="Configuration status">
-              <article class="panel config-summary-card"><span>Authority</span><strong id="configMode">—</strong></article>
-              <article class="panel config-summary-card"><span>Generation</span><strong id="configGeneration">—</strong></article>
-              <article class="panel config-summary-card"><span>Runtime consumers</span><strong id="configConsumers">—</strong></article>
-              <article class="panel config-summary-card"><span>Mutation</span><strong id="configWrites">—</strong></article>
+            <section class="config-summary-grid" aria-label="Estado de la configuración">
+              <article class="panel config-summary-card"><span>Autoridad</span><strong id="configMode">—</strong></article>
+              <article class="panel config-summary-card"><span>Generación</span><strong id="configGeneration">—</strong></article>
+              <article class="panel config-summary-card"><span>Consumidores en ejecución</span><strong id="configConsumers">—</strong></article>
+              <article class="panel config-summary-card"><span>Modificación</span><strong id="configWrites">—</strong></article>
             </section>
 
             <div class="config-toolbar">
-              <div class="segmented" role="group" aria-label="Configuration document">
-                <button id="configPrefilterTab" class="config-kind-button active" type="button" data-config-kind="prefilter_policy">Prefilter policy</button>
-                <button id="configAssetTab" class="config-kind-button" type="button" data-config-kind="asset_inventory">Asset inventory</button>
+              <div class="segmented" role="group" aria-label="Documento de configuración">
+                <button id="configPrefilterTab" class="config-kind-button active" type="button" data-config-kind="prefilter_policy">Política de prefiltro</button>
+                <button id="configAssetTab" class="config-kind-button" type="button" data-config-kind="asset_inventory">Inventario de activos</button>
               </div>
-              <button id="configReloadButton" class="text-button" type="button">Reload active</button>
-              <button id="configForgetButton" class="text-button" type="button">Disconnect</button>
+              <button id="configReloadButton" class="text-button" type="button">Recargar activo</button>
+              <button id="configForgetButton" class="text-button" type="button">Desconectar</button>
             </div>
 
             <div class="config-editor-grid">
               <section class="panel config-editor-panel">
                 <div id="configPrefilterPane">
                   <div class="panel-head">
-                    <div><p class="section-kicker">STRUCTURED EDITOR</p><h2>False-positive rules</h2></div>
-                    <span id="configRuleCount" class="view-meta">0 rules</span>
+                    <div><p class="section-kicker">EDITOR ESTRUCTURADO</p><h2>Reglas de falso positivo</h2></div>
+                    <span id="configRuleCount" class="view-meta">0 reglas</span>
                   </div>
-                  <label class="config-field" for="configInternalCidrs">Internal CIDRs <small>Comma-separated canonical networks</small>
+                  <label class="config-field" for="configInternalCidrs">CIDR internos <small>Redes canónicas separadas por comas</small>
                     <input id="configInternalCidrs" type="text" spellcheck="false">
                   </label>
                   <div id="configRuleList" class="config-item-list"></div>
                   <form id="configPrefilterForm" class="config-form">
                     <input id="configRuleIndex" type="hidden" value="">
-                    <div class="config-form-head"><h3 id="configRuleFormTitle">Add scoped rule</h3><button id="configRuleCancel" class="text-button hidden" type="button">Cancel edit</button></div>
-                    <label class="config-field" for="configRuleSignatures">Signature IDs<input id="configRuleSignatures" type="text" inputmode="numeric" placeholder="2019102" required></label>
-                    <label class="config-field config-span-2" for="configRuleReason">Reason<textarea id="configRuleReason" maxlength="4096" required></textarea></label>
-                    <label class="config-field" for="configRuleProtocol">Protocol<select id="configRuleProtocol"><option value="">Any</option><option value="tcp">TCP</option><option value="udp">UDP</option><option value="icmp">ICMP</option><option value="icmpv6">ICMPv6</option></select></label>
-                    <label class="config-field" for="configRuleNetworkDirection">Network direction<select id="configRuleNetworkDirection"><option value="">Any</option><option value="internal_to_internal">Internal → internal</option><option value="internal_to_external">Internal → external</option><option value="external_to_internal">External → internal</option><option value="external_to_external">External → external</option></select></label>
-                    <label class="config-field" for="configRuleFlowDirection">Flow direction<select id="configRuleFlowDirection"><option value="">Any</option><option value="to_server">To server</option><option value="to_client">To client</option></select></label>
-                    <label class="config-field" for="configRuleSourcePorts">Source ports<input id="configRuleSourcePorts" type="text" inputmode="numeric" placeholder="443, 8443"></label>
-                    <label class="config-field" for="configRuleDestinationPorts">Destination ports<input id="configRuleDestinationPorts" type="text" inputmode="numeric" placeholder="53, 443"></label>
-                    <label class="config-field" for="configRuleSourceCidrs">Source CIDRs<input id="configRuleSourceCidrs" type="text" spellcheck="false"></label>
-                    <label class="config-field" for="configRuleDestinationCidrs">Destination CIDRs<input id="configRuleDestinationCidrs" type="text" spellcheck="false"></label>
+                    <div class="config-form-head"><h3 id="configRuleFormTitle">Agregar regla acotada</h3><button id="configRuleCancel" class="text-button hidden" type="button">Cancelar edición</button></div>
+                    <label class="config-field" for="configRuleSignatures">ID de firmas<input id="configRuleSignatures" type="text" inputmode="numeric" placeholder="2019102" required></label>
+                    <label class="config-field config-span-2" for="configRuleReason">Motivo<textarea id="configRuleReason" maxlength="4096" required></textarea></label>
+                    <label class="config-field" for="configRuleProtocol">Protocolo<select id="configRuleProtocol"><option value="">Cualquiera</option><option value="tcp">TCP</option><option value="udp">UDP</option><option value="icmp">ICMP</option><option value="icmpv6">ICMPv6</option></select></label>
+                    <label class="config-field" for="configRuleNetworkDirection">Dirección de red<select id="configRuleNetworkDirection"><option value="">Cualquiera</option><option value="internal_to_internal">Interna → interna</option><option value="internal_to_external">Interna → externa</option><option value="external_to_internal">Externa → interna</option><option value="external_to_external">Externa → externa</option></select></label>
+                    <label class="config-field" for="configRuleFlowDirection">Dirección del flujo<select id="configRuleFlowDirection"><option value="">Cualquiera</option><option value="to_server">Hacia el servidor</option><option value="to_client">Hacia el cliente</option></select></label>
+                    <label class="config-field" for="configRuleSourcePorts">Puertos de origen<input id="configRuleSourcePorts" type="text" inputmode="numeric" placeholder="443, 8443"></label>
+                    <label class="config-field" for="configRuleDestinationPorts">Puertos de destino<input id="configRuleDestinationPorts" type="text" inputmode="numeric" placeholder="53, 443"></label>
+                    <label class="config-field" for="configRuleSourceCidrs">CIDR de origen<input id="configRuleSourceCidrs" type="text" spellcheck="false"></label>
+                    <label class="config-field" for="configRuleDestinationCidrs">CIDR de destino<input id="configRuleDestinationCidrs" type="text" spellcheck="false"></label>
                     <p id="configRulePreserved" class="config-message config-span-2" role="status"></p>
-                    <button class="action-btn action-primary config-span-2" type="submit">Apply rule to candidate</button>
+                    <button class="action-btn action-primary config-span-2" type="submit">Aplicar regla al candidato</button>
                   </form>
                 </div>
 
                 <div id="configAssetPane" class="hidden">
                   <div class="panel-head">
-                    <div><p class="section-kicker">STRUCTURED EDITOR</p><h2>Exact-IP assets</h2></div>
-                    <span id="configAssetCount" class="view-meta">0 assets</span>
+                    <div><p class="section-kicker">EDITOR ESTRUCTURADO</p><h2>Activos de IP exacta</h2></div>
+                    <span id="configAssetCount" class="view-meta">0 activos</span>
                   </div>
                   <div id="configAssetList" class="config-item-list"></div>
                   <form id="configAssetForm" class="config-form">
                     <input id="configAssetIndex" type="hidden" value="">
-                    <div class="config-form-head config-span-2"><h3 id="configAssetFormTitle">Add asset</h3><button id="configAssetCancel" class="text-button hidden" type="button">Cancel edit</button></div>
-                    <label class="config-field" for="configAssetHostname">Hostname<input id="configAssetHostname" type="text" maxlength="64" required></label>
-                    <label class="config-field" for="configAssetRole">Role<input id="configAssetRole" type="text" maxlength="64" required></label>
-                    <label class="config-field config-span-2" for="configAssetIps">IP addresses <small>Comma-separated IPv4 or IPv6 addresses</small><input id="configAssetIps" type="text" spellcheck="false" required></label>
-                    <label class="config-field" for="configAssetCriticality">Criticality<select id="configAssetCriticality"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label>
-                    <label class="config-check"><input id="configAssetInternetFacing" type="checkbox"> Internet facing</label>
-                    <label class="config-field config-span-2" for="configAssetPorts">Exposed ports <small>Comma-separated protocol/port pairs, for example tcp/443</small><input id="configAssetPorts" type="text" spellcheck="false"></label>
-                    <button class="action-btn action-primary config-span-2" type="submit">Apply asset to candidate</button>
+                    <div class="config-form-head config-span-2"><h3 id="configAssetFormTitle">Agregar activo</h3><button id="configAssetCancel" class="text-button hidden" type="button">Cancelar edición</button></div>
+                    <label class="config-field" for="configAssetHostname">Nombre de host<input id="configAssetHostname" type="text" maxlength="64" required></label>
+                    <label class="config-field" for="configAssetRole">Rol<input id="configAssetRole" type="text" maxlength="64" required></label>
+                    <label class="config-field config-span-2" for="configAssetIps">Direcciones IP <small>Direcciones IPv4 o IPv6 separadas por comas</small><input id="configAssetIps" type="text" spellcheck="false" required></label>
+                    <label class="config-field" for="configAssetCriticality">Criticidad<select id="configAssetCriticality"><option value="low">Baja</option><option value="medium">Media</option><option value="high">Alta</option><option value="critical">Crítica</option></select></label>
+                    <label class="config-check"><input id="configAssetInternetFacing" type="checkbox"> Expuesto a internet</label>
+                    <label class="config-field config-span-2" for="configAssetPorts">Puertos expuestos <small>Pares protocolo/puerto separados por comas, por ejemplo tcp/443</small><input id="configAssetPorts" type="text" spellcheck="false"></label>
+                    <button class="action-btn action-primary config-span-2" type="submit">Aplicar activo al candidato</button>
                   </form>
                 </div>
               </section>
 
               <aside class="config-lifecycle-column">
                 <section class="panel config-lifecycle-panel">
-                  <div class="panel-head"><div><p class="section-kicker">EXACT CANDIDATE</p><h2>Review and activate</h2></div><span id="configDirtyState" class="view-meta">Active document</span></div>
-                  <pre id="configExactDocument" class="config-document" aria-label="Exact candidate JSON"></pre>
-                  <label class="config-field" for="configChangeNote">Change note<textarea id="configChangeNote" maxlength="2000" placeholder="Why this change is needed"></textarea></label>
+                  <div class="panel-head"><div><p class="section-kicker">CANDIDATO EXACTO</p><h2>Revisar y activar</h2></div><span id="configDirtyState" class="view-meta">Documento activo</span></div>
+                  <pre id="configExactDocument" class="config-document" aria-label="JSON exacto del candidato"></pre>
+                  <label class="config-field" for="configChangeNote">Nota de cambio<textarea id="configChangeNote" maxlength="2000" placeholder="Por qué se necesita este cambio"></textarea></label>
                   <div class="config-lifecycle-actions">
-                    <button id="configCreateDraft" class="action-btn" type="button">1. Create draft</button>
-                    <button id="configValidateDraft" class="action-btn" type="button" disabled>2. Validate</button>
-                    <button id="configPreviewDraft" class="action-btn" type="button" disabled>3. Preview impact</button>
+                    <button id="configCreateDraft" class="action-btn" type="button">1. Crear borrador</button>
+                    <button id="configValidateDraft" class="action-btn" type="button" disabled>2. Validar</button>
+                    <button id="configPreviewDraft" class="action-btn" type="button" disabled>3. Previsualizar impacto</button>
                   </div>
                   <div id="configPreviewResult" class="config-preview hidden" aria-live="polite"></div>
                   <div id="configActivationGuard" class="config-activation-guard hidden">
-                    <label class="config-check"><input id="configConfirmActivate" type="checkbox"> I reviewed the exact candidate and bounded preview.</label>
-                    <label class="config-check"><input id="configAcknowledgeBroad" type="checkbox"> I acknowledge any unscoped signature-only rules.</label>
-                    <label class="config-check"><input id="configAcknowledgeBase" type="checkbox"> I reviewed this candidate against the newest shipped baseline.</label>
-                    <label id="configAcknowledgeAssetPreview" class="config-check hidden"><input id="configConfirmAssetPreview" type="checkbox"> This preview could not evaluate every asset-scoped prefilter rule. I accept that suppression changes may be unreported.</label>
-                    <button id="configActivateDraft" class="action-btn action-primary" type="button" disabled>4. Activate for future events</button>
+                    <label class="config-check"><input id="configConfirmActivate" type="checkbox"> Revisé el candidato exacto y la vista previa acotada.</label>
+                    <label class="config-check"><input id="configAcknowledgeBroad" type="checkbox"> Reconozco cualquier regla sin acotar basada solo en firma.</label>
+                    <label class="config-check"><input id="configAcknowledgeBase" type="checkbox"> Revisé este candidato contra la última línea base distribuida.</label>
+                    <label id="configAcknowledgeAssetPreview" class="config-check hidden"><input id="configConfirmAssetPreview" type="checkbox"> Esta vista previa no pudo evaluar todas las reglas de prefiltro con alcance de activo. Acepto que los cambios de supresión pueden no estar reportados.</label>
+                    <button id="configActivateDraft" class="action-btn action-primary" type="button" disabled>4. Activar para eventos futuros</button>
                   </div>
                   <p id="configLifecycleMessage" class="config-message" role="status"></p>
                 </section>
@@ -424,22 +408,22 @@
 
             <div class="config-history-grid">
               <section class="panel config-history-panel">
-                <div class="panel-head"><div><p class="section-kicker">ROLLBACK</p><h2>Revision history</h2></div></div>
+                <div class="panel-head"><div><p class="section-kicker">REVERSIÓN</p><h2>Historial de revisiones</h2></div></div>
                 <div id="configRollbackGuard" class="config-rollback-guard hidden">
-                  <strong id="configRollbackTitle">Confirm rollback</strong>
-                  <p>Rollback creates a new generation for future records; it never rewrites history.</p>
-                  <pre id="configRollbackDocument" class="config-document" aria-label="Exact rollback target JSON"></pre>
-                  <label class="config-check"><input id="configRollbackAcknowledgeBroad" type="checkbox"> I acknowledge any unscoped signature-only rules.</label>
-                  <label class="config-check"><input id="configRollbackAcknowledgeBase" type="checkbox"> I reviewed this revision against the newest shipped baseline.</label>
-                  <label id="configRollbackAssetGuard" class="config-check hidden"><input id="configConfirmRollbackAssetPreview" type="checkbox"> Rollback has no suppression preview. I accept that this inventory may change asset-scoped prefilter decisions unreported.</label>
+                  <strong id="configRollbackTitle">Confirmar reversión</strong>
+                  <p>La reversión crea una nueva generación para registros futuros; nunca reescribe el historial.</p>
+                  <pre id="configRollbackDocument" class="config-document" aria-label="JSON exacto del objetivo de reversión"></pre>
+                  <label class="config-check"><input id="configRollbackAcknowledgeBroad" type="checkbox"> Reconozco cualquier regla sin acotar basada solo en firma.</label>
+                  <label class="config-check"><input id="configRollbackAcknowledgeBase" type="checkbox"> Revisé esta revisión contra la última línea base distribuida.</label>
+                  <label id="configRollbackAssetGuard" class="config-check hidden"><input id="configConfirmRollbackAssetPreview" type="checkbox"> La reversión no tiene vista previa de supresión. Acepto que este inventario puede cambiar decisiones de prefiltro con alcance de activo sin ser reportado.</label>
                   <div class="config-inline-actions">
-                    <button id="configConfirmRollback" class="action-btn action-primary" type="button" disabled>Confirm rollback</button>
-                    <button id="configCancelRollback" class="text-button" type="button">Cancel</button>
+                    <button id="configConfirmRollback" class="action-btn action-primary" type="button" disabled>Confirmar reversión</button>
+                    <button id="configCancelRollback" class="text-button" type="button">Cancelar</button>
                   </div>
                 </div>
                 <div id="configRevisionList" class="config-history-list"></div>
               </section>
-              <section class="panel config-history-panel"><div class="panel-head"><div><p class="section-kicker">ATTRIBUTION</p><h2>Recent audit</h2></div></div><div id="configAuditList" class="config-history-list"></div></section>
+              <section class="panel config-history-panel"><div class="panel-head"><div><p class="section-kicker">ATRIBUCIÓN</p><h2>Auditoría reciente</h2></div></div><div id="configAuditList" class="config-history-list"></div></section>
             </div>
           </div>
         </div>
@@ -447,23 +431,23 @@
 
       <section class="view-panel detail-page" data-view="detail" aria-labelledby="alert-page-title" hidden>
         <header class="detail-route-header">
-          <a class="detail-back" href="/triage">← Triage queue</a>
+          <a class="detail-back" href="/triage">← Cola de triage</a>
           <div class="detail-route-actions">
-            <button id="previousAlertButton" class="text-button" type="button" disabled>↑ Previous</button>
-            <button id="nextAlertButton" class="text-button" type="button" disabled>Next ↓</button>
+            <button id="previousAlertButton" class="text-button" type="button" disabled>↑ Anterior</button>
+            <button id="nextAlertButton" class="text-button" type="button" disabled>Siguiente ↓</button>
           </div>
         </header>
         <div id="detailPageContent" class="detail-page-content">
-          <div class="loading-state">Loading alert detail…</div>
+          <div class="loading-state">Cargando detalle de la alerta…</div>
         </div>
       </section>
 
       <footer class="console-footer">
-        <div class="shortcut-list" aria-label="Keyboard shortcuts">
-          <span><kbd>J</kbd><kbd>K</kbd> Navigate</span>
-          <span><kbd>A</kbd> Agree</span>
-          <span><kbd>D</kbd> Review</span>
-          <span><kbd>U</kbd> Uncertain</span>
+        <div class="shortcut-list" aria-label="Atajos de teclado">
+          <span><kbd>J</kbd><kbd>K</kbd> Navegar</span>
+          <span><kbd>A</kbd> De acuerdo</span>
+          <span><kbd>D</kbd> Revisar</span>
+          <span><kbd>U</kbd> Incierto</span>
         </div>
         <span>AGPL-3.0</span>
       </footer>

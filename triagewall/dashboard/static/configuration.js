@@ -3,7 +3,7 @@
 
   const KINDS = ["prefilter_policy", "asset_inventory"];
   const MAX_SNAPSHOT_ATTEMPTS = 2;
-  const CREDENTIAL_HELP = "The key must carry config:write. It is kept only in this page's memory and is cleared on reload or disconnect.";
+  const CREDENTIAL_HELP = "La clave debe tener el permiso config:write. Solo se guarda en la memoria de esta página y se borra al recargar o desconectar.";
   let apiKey = "";
   let initialized = false;
   let loaded = false;
@@ -80,7 +80,7 @@
   }
 
   function labelKind(kind) {
-    return kind === "prefilter_policy" ? "Prefilter policy" : "Asset inventory";
+    return kind === "prefilter_policy" ? "Política de prefiltro" : "Inventario de activos";
   }
 
   function setConnectionStatus(message, tone = "") {
@@ -98,7 +98,7 @@
   async function configRequest(path, options = {}, credential = apiKey) {
     // The credential is passed per request, never read from a mutable global at
     // send time: a load that started under one key must never send another.
-    if (!credential) throw new Error("Enter a configuration API key first.");
+    if (!credential) throw new Error("Ingresa primero una clave de API de configuración.");
     const headers = new Headers(options.headers || {});
     headers.set("X-API-Key", credential);
     if (options.body != null) headers.set("Content-Type", "application/json");
@@ -116,7 +116,7 @@
     if (!response.ok) {
       const detail = typeof payload?.detail === "string"
         ? payload.detail
-        : `Configuration request failed (${response.status}).`;
+        : `La solicitud de configuración falló (${response.status}).`;
       const error = new Error(detail);
       error.status = response.status;
       throw error;
@@ -130,9 +130,9 @@
 
   function csvIntegers(value, label) {
     return csvStrings(value).map((item) => {
-      if (!/^\d+$/.test(item)) throw new Error(`${label} must contain integers only.`);
+      if (!/^\d+$/.test(item)) throw new Error(`${label} solo debe contener números enteros.`);
       const parsed = Number(item);
-      if (!Number.isSafeInteger(parsed)) throw new Error(`${label} contains an invalid integer.`);
+      if (!Number.isSafeInteger(parsed)) throw new Error(`${label} contiene un número entero inválido.`);
       return parsed;
     });
   }
@@ -140,23 +140,23 @@
   function renderConnection(connected) {
     element("configCredentialPanel").classList.toggle("hidden", connected);
     element("configWorkspace").classList.toggle("hidden", !connected);
-    setConnectionStatus(connected ? "Connected for this page only" : "Credential required", connected ? "ok" : "");
+    setConnectionStatus(connected ? "Conectado solo para esta página" : "Se requiere credencial", connected ? "ok" : "");
   }
 
   function renderSummary() {
     element("configMode").textContent = summary?.mode ?? "—";
     element("configGeneration").textContent = summary?.generation ?? "—";
-    element("configWrites").textContent = summary?.writes_enabled ? "Enabled" : "Read only";
+    element("configWrites").textContent = summary?.writes_enabled ? "Habilitado" : "Solo lectura";
     const consumers = summary?.reload?.consumers ?? [];
     if (!consumers.length) {
-      element("configConsumers").textContent = "Not observed";
+      element("configConsumers").textContent = "No observado";
     } else {
       const healthy = consumers.filter((consumer) =>
         consumer.status === "ok" && consumer.loaded_generation === summary.generation
       ).length;
-      element("configConsumers").textContent = `${healthy}/${consumers.length} current`;
+      element("configConsumers").textContent = `${healthy}/${consumers.length} actualizados`;
       element("configConsumers").title = consumers.map((consumer) =>
-        `${consumer.consumer}: ${consumer.status}, loaded ${consumer.loaded_generation}, desired ${summary.generation}`
+        `${consumer.consumer}: ${consumer.status}, cargada ${consumer.loaded_generation}, deseada ${summary.generation}`
       ).join("\n");
     }
   }
@@ -167,8 +167,8 @@
     ["flow_directions", "configRuleFlowDirection"],
   ];
   const RULE_NUMBER_LIST_FIELDS = [
-    ["source_ports", "configRuleSourcePorts", "Source ports"],
-    ["destination_ports", "configRuleDestinationPorts", "Destination ports"],
+    ["source_ports", "configRuleSourcePorts", "Puertos de origen"],
+    ["destination_ports", "configRuleDestinationPorts", "Puertos de destino"],
   ];
   const RULE_TEXT_LIST_FIELDS = [
     ["source_cidrs", "configRuleSourceCidrs"],
@@ -219,7 +219,7 @@
     element("configRuleDestinationPorts").value = "";
     element("configRuleSourceCidrs").value = "";
     element("configRuleDestinationCidrs").value = "";
-    element("configRuleFormTitle").textContent = "Add scoped rule";
+    element("configRuleFormTitle").textContent = "Agregar regla acotada";
     element("configRuleCancel").classList.add("hidden");
     element("configRulePreserved").textContent = "";
   }
@@ -245,7 +245,7 @@
       return Array.isArray(value) && value.length > 1;
     }).map((key) => `${key}: ${JSON.stringify(match[key])}`);
     return notes.length
-      ? `Preserved as-is (not editable in this form): ${notes.join(" · ")}`
+      ? `Conservado tal cual (no editable en este formulario): ${notes.join(" · ")}`
       : "";
   }
 
@@ -258,7 +258,7 @@
     element("configAssetCriticality").value = "low";
     element("configAssetInternetFacing").checked = false;
     element("configAssetPorts").value = "";
-    element("configAssetFormTitle").textContent = "Add asset";
+    element("configAssetFormTitle").textContent = "Agregar activo";
     element("configAssetCancel").classList.add("hidden");
   }
 
@@ -271,36 +271,36 @@
     if (!dirtyForms.has(FORM_SCOPES.cidrs)) {
       element("configInternalCidrs").value = (document.internal_cidrs ?? []).join(", ");
     }
-    element("configRuleCount").textContent = `${rules.length} rule${rules.length === 1 ? "" : "s"}`;
+    element("configRuleCount").textContent = `${rules.length} regla${rules.length === 1 ? "" : "s"}`;
     element("configRuleList").innerHTML = rules.length ? rules.map((rule, index) => {
       const scope = rule.match && Object.keys(rule.match).length
         ? Object.entries(rule.match).map(([key, value]) => `${key}: ${JSON.stringify(value)}`).join(" · ")
-        : "Unscoped signature-only rule";
+        : "Regla sin acotar, solo por firma";
       return `<article class="config-item">
         <div><strong>SID ${escapeHtml((rule.signature_ids ?? []).join(", "))}</strong><p>${escapeHtml(rule.reason ?? "")}</p><small>${escapeHtml(scope)}</small></div>
-        <div><button class="text-button" type="button" data-config-rule-edit="${index}">Edit</button><button class="text-button danger" type="button" data-config-rule-remove="${index}">Remove</button></div>
+        <div><button class="text-button" type="button" data-config-rule-edit="${index}">Editar</button><button class="text-button danger" type="button" data-config-rule-remove="${index}">Eliminar</button></div>
       </article>`;
-    }).join("") : '<p class="detail-empty">No deterministic false-positive rules.</p>';
+    }).join("") : '<p class="detail-empty">Sin reglas deterministas de falso positivo.</p>';
   }
 
   function renderAssets() {
     const document = workingDocuments.asset_inventory ?? { version: 1, assets: [] };
     const assets = Array.isArray(document.assets) ? document.assets : [];
-    element("configAssetCount").textContent = `${assets.length} asset${assets.length === 1 ? "" : "s"}`;
+    element("configAssetCount").textContent = `${assets.length} activo${assets.length === 1 ? "" : "s"}`;
     element("configAssetList").innerHTML = assets.length ? assets.map((asset, index) => {
-      const ports = (asset.exposed_ports ?? []).map((port) => `${port.protocol}/${port.port}`).join(", ") || "no exposed ports";
+      const ports = (asset.exposed_ports ?? []).map((port) => `${port.protocol}/${port.port}`).join(", ") || "sin puertos expuestos";
       return `<article class="config-item">
-        <div><strong>${escapeHtml(asset.hostname)}</strong><p>${escapeHtml((asset.ips ?? []).join(", "))}</p><small>${escapeHtml(asset.role)} · ${escapeHtml(asset.criticality)} · ${asset.internet_facing ? "internet facing" : "internal"} · ${escapeHtml(ports)}</small></div>
-        <div><button class="text-button" type="button" data-config-asset-edit="${index}">Edit</button><button class="text-button danger" type="button" data-config-asset-remove="${index}">Remove</button></div>
+        <div><strong>${escapeHtml(asset.hostname)}</strong><p>${escapeHtml((asset.ips ?? []).join(", "))}</p><small>${escapeHtml(asset.role)} · ${escapeHtml(asset.criticality)} · ${asset.internet_facing ? "expuesto a internet" : "interno"} · ${escapeHtml(ports)}</small></div>
+        <div><button class="text-button" type="button" data-config-asset-edit="${index}">Editar</button><button class="text-button danger" type="button" data-config-asset-remove="${index}">Eliminar</button></div>
       </article>`;
-    }).join("") : '<p class="detail-empty">No private assets recorded.</p>';
+    }).join("") : '<p class="detail-empty">Sin activos privados registrados.</p>';
   }
 
   function renderExactDocument() {
     const document = workingDocuments[selectedKind];
     element("configExactDocument").textContent = document ? JSON.stringify(document, null, 2) : "";
     const dirty = dirtyKinds.has(selectedKind);
-    element("configDirtyState").textContent = dirty ? "Candidate differs from active" : "Active document";
+    element("configDirtyState").textContent = dirty ? "El candidato difiere del activo" : "Documento activo";
   }
 
   function renderLifecycle() {
@@ -342,17 +342,17 @@
     const rows = revisions[selectedKind] ?? [];
     element("configRevisionList").innerHTML = rows.length ? rows.map((revision) => {
       const rollback = isRollbackTarget(revision) && summary?.writes_enabled
-        ? `<button class="text-button" type="button" data-config-rollback="${Number(revision.id)}">Rollback</button>`
+        ? `<button class="text-button" type="button" data-config-rollback="${Number(revision.id)}">Revertir</button>`
         : "";
       return `<article class="config-history-row"><div><strong>${escapeHtml(revision.state)} · #${Number(revision.id)}</strong><small>${escapeHtml(revision.created_by)} · ${escapeHtml(revision.created_at)}</small></div>${rollback}</article>`;
-    }).join("") : '<p class="detail-empty">No revisions available.</p>';
+    }).join("") : '<p class="detail-empty">No hay revisiones disponibles.</p>';
     element("configAuditList").innerHTML = auditEntries.length ? auditEntries.map((entry) =>
       `<article class="config-history-row"><div><strong>${escapeHtml(entry.action)}</strong><small>${escapeHtml(entry.actor)} · ${escapeHtml(entry.occurred_at)}</small></div></article>`
-    ).join("") : '<p class="detail-empty">No configuration audit records.</p>';
+    ).join("") : '<p class="detail-empty">Sin registros de auditoría de configuración.</p>';
     element("configRollbackGuard").classList.toggle("hidden", pendingRollbackId == null);
     element("configRollbackTitle").textContent = pendingRollbackId == null
-      ? "Confirm rollback"
-      : `Confirm rollback to revision #${pendingRollbackId}`;
+      ? "Confirmar reversión"
+      : `Confirmar reversión a la revisión #${pendingRollbackId}`;
     const target = rollbackTarget && rollbackTarget.id === pendingRollbackId
       ? rollbackTarget
       : null;
@@ -419,7 +419,7 @@
     renderHistory();
   }
 
-  function invalidateLifecycle(message = "Candidate changed. Create a new immutable draft.") {
+  function invalidateLifecycle(message = "El candidato cambió. Crea un nuevo borrador inmutable.") {
     lifecycle = emptyLifecycle();
     clearRollbackSelection();
     element("configConfirmActivate").checked = false;
@@ -471,17 +471,17 @@
       snapshot[id] = element(id).value;
       return snapshot;
     }, {});
-    element("configRuleFormTitle").textContent = `Edit rule ${index + 1}`;
+    element("configRuleFormTitle").textContent = `Editar regla ${index + 1}`;
     element("configRuleCancel").classList.remove("hidden");
     element("configRulePreserved").textContent = describePreservedConstraints(rule);
     element("configRuleReason").focus();
   }
 
   function ruleFromForm() {
-    const signatures = csvIntegers(element("configRuleSignatures").value, "Signature IDs");
-    if (!signatures.length) throw new Error("At least one signature ID is required.");
+    const signatures = csvIntegers(element("configRuleSignatures").value, "ID de firmas");
+    if (!signatures.length) throw new Error("Se requiere al menos un ID de firma.");
     const reason = element("configRuleReason").value.trim();
-    if (!reason) throw new Error("A review reason is required.");
+    if (!reason) throw new Error("Se requiere un motivo de revisión.");
     // Start from the retained rule so selectors the form cannot express, such
     // as source_asset and destination_asset, survive any edit untouched.
     const rule = editingRule ? clone(editingRule) : {};
@@ -541,7 +541,7 @@
     element("configAssetCriticality").value = asset.criticality ?? "low";
     element("configAssetInternetFacing").checked = Boolean(asset.internet_facing);
     element("configAssetPorts").value = (asset.exposed_ports ?? []).map((port) => `${port.protocol}/${port.port}`).join(", ");
-    element("configAssetFormTitle").textContent = `Edit ${asset.hostname}`;
+    element("configAssetFormTitle").textContent = `Editar ${asset.hostname}`;
     element("configAssetCancel").classList.remove("hidden");
     element("configAssetHostname").focus();
   }
@@ -549,7 +549,7 @@
   function assetFromForm() {
     const ports = csvStrings(element("configAssetPorts").value).map((value) => {
       const match = /^(tcp|udp)\/(\d+)$/.exec(value.toLowerCase());
-      if (!match) throw new Error("Exposed ports must use protocol/port, for example tcp/443.");
+      if (!match) throw new Error("Los puertos expuestos deben usar protocolo/puerto, por ejemplo tcp/443.");
       return { protocol: match[1], port: Number(match[2]) };
     });
     return {
@@ -570,7 +570,7 @@
       const index = rawIndex === "" ? -1 : Number(rawIndex);
       const asset = assetFromForm();
       if (!asset.hostname || !asset.role || !asset.ips.length) {
-        throw new Error("Hostname, role, and at least one IP address are required.");
+        throw new Error("Se requieren nombre de host, rol y al menos una dirección IP.");
       }
       if (Number.isInteger(index) && index >= 0) inventory.assets[index] = asset;
       else inventory.assets.push(asset);
@@ -620,14 +620,14 @@
         preview: null,
       };
       setMessage(payload.resumed
-        ? `Resumed ${payload.draft.state} revision #${payload.draft.id}. ${validatedRevisionId ? "Review its bounded impact next." : "Validate it next."}`
-        : `Immutable draft #${payload.draft.id} created. Validate it next.`);
+        ? `Se retomó la revisión ${payload.draft.state} #${payload.draft.id}. ${validatedRevisionId ? "A continuación, revisa su impacto acotado." : "A continuación, valídala."}`
+        : `Borrador inmutable #${payload.draft.id} creado. A continuación, valídalo.`);
       renderLifecycle();
     } catch (error) {
       // A failure belongs to the context that asked for it; a superseded one
       // reports nothing over newer work.
       if (!ownsCurrentLifecycle(identity)) return;
-      setMessage(error.status === 409 ? `${error.message} Reload active configuration before retrying.` : error.message, true);
+      setMessage(error.status === 409 ? `${error.message} Recarga la configuración activa antes de reintentar.` : error.message, true);
     }
   }
 
@@ -649,7 +649,7 @@
       // valid candidate, and the submitted draft still carries its lineage.
       if (payload.validation?.status !== "valid") {
         lifecycle = emptyLifecycle();
-        setMessage(`Validation rejected the candidate: ${JSON.stringify(payload.validation)}`, true);
+        setMessage(`La validación rechazó el candidato: ${JSON.stringify(payload.validation)}`, true);
         renderLifecycle();
         return;
       }
@@ -663,7 +663,7 @@
       if (!ownsCurrentLifecycle(identity)) return;
       lifecycle.validatedId = payload.revision.id;
       workingDocuments[identity.selectedKind] = canonical.document;
-      setMessage(`Validated revision #${payload.revision.id}. Review its bounded impact next.`);
+      setMessage(`Revisión #${payload.revision.id} validada. A continuación, revisa su impacto acotado.`);
       renderEditor();
     } catch (error) {
       // A failure belongs to the lifecycle that asked for it, so a superseded
@@ -715,13 +715,13 @@
         warnings: payload.warnings,
         summary: payload.summary,
       }, null, 2);
-      setMessage("Preview complete. Activation affects only future records.");
+      setMessage("Vista previa completa. La activación solo afecta a registros futuros.");
       renderLifecycle();
     } catch (error) {
       // A failure belongs to the lifecycle that asked for it, so a superseded
       // one reports nothing over newer work.
       if (!ownsCurrentLifecycle(identity)) return;
-      setMessage(error.status === 409 ? `${error.message} Reload active configuration before retrying.` : error.message, true);
+      setMessage(error.status === 409 ? `${error.message} Recarga la configuración activa antes de reintentar.` : error.message, true);
     }
   }
 
@@ -735,7 +735,7 @@
       && !element("configConfirmAssetPreview").checked
     ) {
       setMessage(
-        "This preview could not evaluate every asset-scoped prefilter rule. Acknowledge that before activating.",
+        "Esta vista previa no pudo evaluar todas las reglas de prefiltro con alcance de activo. Reconoce eso antes de activar.",
         true,
       );
       return;
@@ -760,15 +760,15 @@
         // a forced load would discard without the usual confirmation. Keep that
         // work and say plainly that the view is now behind the server.
         setMessage(
-          `Generation ${payload.generation} activated. Your newer unapplied work was kept, so this view still shows the previous generation -- reload active configuration when you are ready to discard it.`,
+          `Generación ${payload.generation} activada. Tu trabajo más reciente sin aplicar se conservó, así que esta vista todavía muestra la generación anterior — recarga la configuración activa cuando quieras descartarlo.`,
         );
         return;
       }
       await load(true);
-      setMessage(`Generation ${payload.generation} activated. Runtime consumers will reload between records.`);
+      setMessage(`Generación ${payload.generation} activada. Los consumidores en ejecución la recargarán entre registros.`);
     } catch (error) {
       if (!ownsCurrentLifecycle(identity)) return;
-      setMessage(error.status === 409 ? `${error.message} Review the acknowledgement controls or reload active configuration.` : error.message, true);
+      setMessage(error.status === 409 ? `${error.message} Revisa los controles de confirmación o recarga la configuración activa.` : error.message, true);
     }
   }
 
@@ -776,14 +776,14 @@
     // The disabled control is the visible guard; this is the real one. Rollback
     // is never sent for a revision whose exact document was not displayed.
     if (rollbackTarget?.id !== revisionId) {
-      setMessage(`Load revision #${revisionId} before confirming rollback.`, true);
+      setMessage(`Carga la revisión #${revisionId} antes de confirmar la reversión.`, true);
       return;
     }
     // The disabled control is the visible guard; this is the real one. A forced
     // click without the acknowledgements this target needs sends nothing.
     if (!rollbackAcknowledgementsSatisfied(rollbackTarget)) {
       setMessage(
-        `Acknowledge the rollback conditions for revision #${revisionId} before confirming.`,
+        `Reconoce las condiciones de reversión para la revisión #${revisionId} antes de confirmar.`,
         true,
       );
       return;
@@ -803,15 +803,15 @@
       });
       if (!ownsCurrentLifecycle(identity)) {
         setMessage(
-          `Rolled back to revision #${revisionId} as generation ${payload.generation}. Your newer unapplied work was kept, so this view still shows the previous generation -- reload active configuration when you are ready to discard it.`,
+          `Se revirtió a la revisión #${revisionId} como generación ${payload.generation}. Tu trabajo más reciente sin aplicar se conservó, así que esta vista todavía muestra la generación anterior — recarga la configuración activa cuando quieras descartarlo.`,
         );
         return;
       }
       await load(true);
-      setMessage(`Rolled back to revision #${revisionId} as generation ${payload.generation}.`);
+      setMessage(`Se revirtió a la revisión #${revisionId} como generación ${payload.generation}.`);
     } catch (error) {
       if (!ownsCurrentLifecycle(identity)) return;
-      setMessage(error.status === 409 ? `${error.message} Review the rollback acknowledgements or reload active configuration.` : error.message, true);
+      setMessage(error.status === 409 ? `${error.message} Revisa las confirmaciones de reversión o recarga la configuración activa.` : error.message, true);
     }
   }
 
@@ -822,7 +822,7 @@
     clearRollbackSelection();
     pendingRollbackId = revisionId;
     renderHistory();
-    setMessage(`Loading revision #${revisionId} for review…`);
+    setMessage(`Cargando la revisión #${revisionId} para revisión…`);
     try {
       const payload = await configRequest(
         `/api/v1/config/${selectedKind}/revisions/${revisionId}`,
@@ -830,13 +830,13 @@
       if (epoch !== stateEpoch || pendingRollbackId !== revisionId) return;
       rollbackTarget = { id: revisionId, document: payload.document };
       renderHistory();
-      setMessage(`Review the exact revision #${revisionId} below, then confirm rollback.`);
+      setMessage(`Revisa la revisión exacta #${revisionId} abajo, luego confirma la reversión.`);
     } catch (error) {
       if (epoch !== stateEpoch || pendingRollbackId !== revisionId) return;
       // Never leave confirmation available against an unseen document.
       rollbackTarget = null;
       renderHistory();
-      setMessage(`Revision #${revisionId} could not be loaded: ${error.message}`, true);
+      setMessage(`No se pudo cargar la revisión #${revisionId}: ${error.message}`, true);
     }
   }
 
@@ -855,7 +855,7 @@
       selectKind("prefilter_policy");
       resetRuleForm();
       element("configRuleSignatures").value = seed.signatureId == null ? "" : String(seed.signatureId);
-      element("configRuleReason").value = seed.signature ? `Reviewed false positive: ${seed.signature}` : "Reviewed false positive";
+      element("configRuleReason").value = seed.signature ? `Falso positivo revisado: ${seed.signature}` : "Falso positivo revisado";
       element("configRuleProtocol").value = ["tcp", "udp", "icmp", "icmpv6"].includes(seed.protocol) ? seed.protocol : "";
       element("configRuleFlowDirection").value = ["to_server", "to_client"].includes(seed.flowDirection) ? seed.flowDirection : "";
       element("configRuleSourcePorts").value = seed.sourcePort ?? "";
@@ -863,7 +863,7 @@
       // Evidence the operator has not applied yet is unapplied work, whether
       // they typed it or an alert handoff filled it in for them.
       noteFormActivity(FORM_SCOPES.rule);
-      setMessage("Alert evidence populated the rule form. Review its scope before applying it to the candidate.");
+      setMessage("La evidencia de la alerta completó el formulario de regla. Revisa su alcance antes de aplicarlo al candidato.");
       element("configRuleReason").focus();
     } else {
       selectKind("asset_inventory");
@@ -876,18 +876,18 @@
       // claim anything was preserved: the form it is about to fill may have
       // just been replaced with the operator's explicit consent.
       const staleWarning = seed.resolvedAgainstCandidate
-        ? " This used your local inventory candidate, which may be older than the active configuration."
+        ? " Esto usó tu candidato de inventario local, que puede ser más antiguo que la configuración activa."
         : "";
       const existingIndex = assetIndexForAddress(seed.ip);
       if (existingIndex >= 0) {
         editAsset(existingIndex);
         setMessage(
-          `Editing the existing asset that already owns ${seed.ip}. Its other addresses are preserved.${staleWarning}`,
+          `Editando el activo existente que ya posee ${seed.ip}. Sus otras direcciones se conservan.${staleWarning}`,
           Boolean(staleWarning),
         );
         return;
       }
-      element("configAssetHostname").value = seed.asset?.hostname ?? "new-asset";
+      element("configAssetHostname").value = seed.asset?.hostname ?? "activo-nuevo";
       element("configAssetRole").value = seed.asset?.role ?? "endpoint";
       element("configAssetIps").value = seed.ip ?? "";
       element("configAssetCriticality").value = seed.asset?.criticality ?? "medium";
@@ -895,7 +895,7 @@
       element("configAssetPorts").value = (seed.asset?.exposed_ports ?? []).map((port) => `${port.protocol}/${port.port}`).join(", ");
       noteFormActivity(FORM_SCOPES.asset);
       setMessage(
-        `Alert evidence populated the asset form. Review it before applying it to the candidate.${staleWarning}`,
+        `La evidencia de la alerta completó el formulario de activo. Revísalo antes de aplicarlo al candidato.${staleWarning}`,
         Boolean(staleWarning),
       );
       element("configAssetHostname").focus();
@@ -927,7 +927,7 @@
       const address = side === "source" ? verdict?.src_ip : verdict?.dest_ip;
       if (typeof address === "string" && /^ip_[0-9a-f]{32}$/.test(address)) {
         setMessage(
-          "This alert's address is redacted, so it cannot seed an asset record.",
+          "La dirección de esta alerta está redactada, por lo que no puede originar un registro de activo.",
         );
         return undefined;
       }
@@ -951,9 +951,9 @@
     // not this handoff's to discard, and must not raise a prompt either.
     const targetScope = action === "prefilter" ? FORM_SCOPES.rule : FORM_SCOPES.asset;
     if (loaded && dirtyForms.has(targetScope)) {
-      const label = action === "prefilter" ? "rule" : "asset";
+      const label = action === "prefilter" ? "de regla" : "de activo";
       const replace = global.confirm(
-        `Replace your unapplied ${label} form input with this alert's evidence?`,
+        `¿Reemplazar tu formulario ${label} sin aplicar con la evidencia de esta alerta?`,
       );
       if (!replace) {
         // Declined: the form and its dirty marker stay exactly as they are, and
@@ -963,7 +963,7 @@
         invalidateInFlightResponses();
         pendingSeed = null;
         setMessage(
-          `Kept your unapplied ${label} form input. The alert evidence was not applied.`,
+          `Se conservó tu formulario ${label} sin aplicar. La evidencia de la alerta no se aplicó.`,
         );
         return undefined;
       }
@@ -1009,7 +1009,7 @@
     loading = true;
     loadingEpoch = epoch;
     let published = false;
-    setConnectionStatus("Loading configuration…");
+    setConnectionStatus("Cargando configuración…");
     try {
       const snapshot = await readConsistentSnapshot(epoch, credential);
       if (snapshot === null) return;
@@ -1047,7 +1047,7 @@
       published = true;
       loaded = false;
       renderConnection(false);
-      setConnectionStatus([401, 403].includes(error.status) ? "Key rejected" : "Configuration unavailable", "error");
+      setConnectionStatus([401, 403].includes(error.status) ? "Clave rechazada" : "Configuración no disponible", "error");
       element("configCredentialPanel").classList.remove("hidden");
       element("configCredentialHelp").textContent = error.message;
     } finally {
@@ -1091,7 +1091,7 @@
     if (!snapshotIsConsistent(summaryPayload, prefilter, assets)) {
       if (attempt >= MAX_SNAPSHOT_ATTEMPTS - 1) {
         throw new Error(
-          "Active configuration changed while loading. Reload active configuration to continue.",
+          "La configuración activa cambió durante la carga. Recarga la configuración activa para continuar.",
         );
       }
       return readConsistentSnapshot(epoch, credential, attempt + 1);
@@ -1201,7 +1201,7 @@
       // candidate and every surface's unapplied input; nothing else is.
       if (
         (dirtyKinds.size || hasUnappliedFormWork())
-        && !global.confirm("Discard unsaved candidate changes and reload active configuration?")
+        && !global.confirm("¿Descartar los cambios sin guardar del candidato y recargar la configuración activa?")
       ) return undefined;
       return load(true);
     });
